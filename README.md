@@ -591,6 +591,13 @@ loads and renders.
 and the ending on a timer. Combined with `--write-movie frames/f.png` it gives you a
 full visual pass without touching the mouse. The flag does nothing when it is absent.
 
+`godot --shots` drives the game to five representative states and writes a PNG of each
+into `itchpush/screenshots` - the desktop, the composer, the store, the late-run heat,
+and the ending. Five, because that is what a store page can use. It needs a window;
+there is nothing to capture headless. See `itchpush/README.md` for what goes where on
+the itch.io page, including the SharedArrayBuffer setting the web build will not run
+without.
+
 ## Credits
 
 Fonts: [Pixelify Sans](https://fonts.google.com/specimen/Pixelify+Sans) for prose and

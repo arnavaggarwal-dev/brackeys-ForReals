@@ -9,6 +9,119 @@ static func nuke_only() -> bool:
 	return OS.get_cmdline_args().has("--nuke")
 
 
+static func shots_only() -> bool:
+	return OS.get_cmdline_args().has("--shots")
+
+
+const SHOT_DIR := "res://itchpush/screenshots"
+const SHOT_SIZE := Vector2i(1664, 936)
+
+
+static func _snap(name: String) -> void:
+	await RenderingServer.frame_post_draw
+	var img := AppShell.i.get_viewport().get_texture().get_image()
+	DirAccess.make_dir_recursive_absolute(SHOT_DIR)
+	var path := "%s/%s.png" % [SHOT_DIR, name]
+	if img.save_png(path) != OK:
+		push_error("SHOTS: could not write %s" % path)
+		return
+	print("SHOT: %s  %dx%d" % [name, img.get_width(), img.get_height()])
+
+
+# `godot --shots` drives the game to five representative states and writes a PNG
+# of each into itchpush/screenshots. Five, because that is what a store page can
+# actually use - the desktop, the two things you spend the run doing, the state
+# the idle half puts you in, and the ending.
+static func run_shots() -> void:
+	var tree := AppShell.i.get_tree()
+	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+	DisplayServer.window_set_size(SHOT_SIZE)
+	await tree.create_timer(0.6).timeout
+
+	Game.begin("skibiditoilet", Data.AVATAR_CHOICES[4])
+	Game.day = 6
+	Game.followers = 1_284
+	Game.payout = 780.0
+	Game._check_store()
+	Game._check_comments()
+	for h: String in [
+		"morning_kate", "boxscore_pete", "lab_notes", "frontline_map", "policywonk"
+	]:
+		Game.follow(h)
+	Game.day_left = Data.DAY_BASE_SECONDS
+	Game._populate_feed()
+	Game.deal_hand()
+
+	# A history of your own, so the ending has something to summarise and the
+	# left column has something still travelling.
+	Game.owned = {"caused": true, "hiding": true, "leak": true}
+	for i in 4:
+		Game.posts_today = 0
+		Game.deal_hand()
+		Game.set_fragment("start", String(Game.hand_for("start")[i % 4]["id"]))
+		Game.set_fragment("middle", String(Game.hand_for("middle")[(i + 1) % 4]["id"]))
+		Game.set_fragment("end", String(Game.hand_for("end")[(i + 2) % 4]["id"]))
+		Game.publish()
+		await tree.create_timer(1.2).timeout
+	await tree.create_timer(3.0).timeout
+	Game.view_dirty.emit()
+	await _snap("01-desktop")
+
+	# The composer, mid-sentence, with the projection showing. The day's post
+	# has to be unspent or the composer refuses to open at all.
+	Game.posts_today = 0
+	Game.deal_hand()
+	Composer.open()
+	await tree.create_timer(0.4).timeout
+	Game.set_fragment("start", String(Game.hand_for("start")[0]["id"]))
+	Game.set_fragment("middle", String(Game.hand_for("middle")[1]["id"]))
+	Game.set_fragment("end", String(Game.hand_for("end")[2]["id"]))
+	Composer.refresh()
+	await tree.create_timer(0.8).timeout
+	await _snap("02-composer")
+	Composer.close()
+	await tree.create_timer(0.4).timeout
+
+	# The store. The whole point of the game is on this screen.
+	Store.open()
+	await tree.create_timer(0.8).timeout
+	await _snap("03-store")
+	Store.close()
+	await tree.create_timer(0.4).timeout
+
+	# Late run: things you own, heat you cannot cool, a display coming apart.
+	Game.followers = 4_180
+	Game.payout = 1_460.0
+	Game.assets = {"burner": 6, "farm": 4, "pod": 2, "scheduler": 1}
+	Game.agents = {"intern": 3, "stringer": 1}
+	Game.assets_unlocked = true
+	Game.agents_unlocked = true
+	Game.suspicion = 64.0
+	Game.strikes = 1
+	Game.posts_today = 1
+	# Set the rank directly rather than through _check_milestone, whose toasts
+	# would stack over the Assets panel this shot exists to show.
+	Game.milestone = 7
+	Game.view_dirty.emit()
+	Game.glitch.emit(0.45)
+	await tree.create_timer(1.0).timeout
+	await _snap("04-heat")
+
+	# The ending, and the title it hands you. Same reason - no toasts over it.
+	Game.followers = Data.WIN_FOLLOWERS
+	# Eight ranks passed at 5,000, so title() reads "public figure" - setting
+	# this to MILESTONES.size() would wrongly crown you "everyone".
+	Game.milestone = 8
+	Game.won = true
+	Game._finish("won")
+	await tree.create_timer(1.2).timeout
+	await _snap("05-ending")
+
+	print("SHOTS: five written to %s" % SHOT_DIR)
+	await tree.create_timer(0.5).timeout
+	tree.quit()
+
+
 static func run_nuke() -> void:
 	Game.begin("tester", Data.AVATAR_CHOICES[0])
 	await AppShell.i.get_tree().create_timer(0.5).timeout

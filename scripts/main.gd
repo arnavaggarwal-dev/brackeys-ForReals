@@ -46,7 +46,9 @@ func _ready() -> void:
 	Game.screen_changed.connect(_on_screen)
 	NukeScreen.warm()
 
-	if DevTour.nuke_only():
+	if DevTour.shots_only():
+		DevTour.run_shots()
+	elif DevTour.nuke_only():
 		DevTour.run_nuke()
 	elif not DevTour.enabled() and Save.load_game():
 		# Loading can end the run outright if the people you hired filled the
