@@ -24,7 +24,7 @@ if /i "%TAG%"=="itch" (
 if /i "%TAG%"=="notag" (
     set "TAG=none"
 ) else if "%TAG%"=="" (
-    for /f "tokens=* usebackq" %%v in (`powershell -NoProfile -Command "$t=(git describe --tags --abbrev=0 2^>$null); if(-not $t){$t='v0.0.0'}; $t=$t -replace '^v',''; $p=$t.Split('.'); 'v{0}.{1}.{2}' -f $p[0],$p[1],([int]$p[2]+1)"`) do set "TAG=%%v"
+    for /f "tokens=* usebackq" %%v in (`powershell -NoProfile -Command "$ts=@(git tag --list 'v*' --sort=-v:refname); $t = if($ts.Count){$ts[0]}else{'v0.0.0'}; $p=($t -replace '^v','').Split('.'); 'v{0}.{1}.{2}' -f $p[0],$p[1],([int]$p[2]+1)"`) do set "TAG=%%v"
 )
 
 echo.
