@@ -139,7 +139,7 @@ break a rule the rest of the game obeys:
 
 Assets appear at 300 followers, hires at 750. Prices compound 15% per purchase (the
 scheduler 4×, because the day does not get longer). Everything you own adds heat every
-second, and that is the whole late game — a burner costs over four thousand times more
+second, and that is the whole late game - a burner costs over four thousand times more
 heat per follower than a media partner.
 
 | Asset | From | Produces | Susp/sec | | Agent | From | Does | Susp/sec |
@@ -243,11 +243,6 @@ godot --headless --path . --export-release "Linux"           builds/Linux/ForRea
 godot --headless --path . --export-release "Web"             builds/web/index.html
 ```
 
-macOS cannot be exported from Windows, so it is built in CI from Linux instead.
-
-The binaries are committed, so the repository uses **Git LFS** — clone without it and
-you get pointer files instead of a game. The Windows export alone is 106 MB and GitHub
-rejects any single file over 100 MB outside LFS.
 
 ### Shipping
 
@@ -262,6 +257,3 @@ push.bat "message" v1.0.0 itch  ...and upload to itch.io with butler
 
 The macOS build is ad-hoc signed, not notarised. Gatekeeper refuses it on first launch:
 right-click and **Open**, or `xattr -dr com.apple.quarantine ForReals.app`.
-
-See `itchpush/README.md` for the store page — screenshots, description, and the upload
-settings the web build needs.
