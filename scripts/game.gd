@@ -837,6 +837,8 @@ func comment_reach() -> int:
 
 func _react(kind: String, impact: float) -> Dictionary:
 	var reach := int(round(projected_reach() * impact))
+	if projected_reach() > 0:
+		reach = maxi(1, reach)
 	var gained := int(round(
 		reach * randf_range(Data.FOLLOWER_ROLL_MIN, Data.FOLLOWER_ROLL_MAX) * Data.FOLLOWER_SHARE
 	))

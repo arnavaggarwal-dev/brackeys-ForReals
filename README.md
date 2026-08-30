@@ -41,7 +41,7 @@ suspicion, throttled reach and a strike land, and nobody had to explain any of t
 - **Your feed is only the last 7 people you followed.** Follow an eighth and the first
   drops out. Following costs 0.3–3.67s off *that day* only.
 - **Reacting is posting at a discount** — a like is 1/25 of your reach, a fire 1/20, a
-  reply 1/8, once each per post. Replies unlock at 150 followers.
+  reply 1/8, once each per post. Replies unlock at 5 followers.
 - **Reach arrives, it does not land.** Posting pays nothing immediately; followers
   trickle in on a log-normal curve while the post travels.
 - **Suspicion.** Bought fragments raise it. Fill the bar and you take a strike. Three
@@ -77,7 +77,7 @@ Everything that decides how the game feels is a constant at the top of
 | --- | --- |
 | Day length | 30s (min 6s after follows) |
 | Win tiers | 5,000 / 1M / 1B |
-| Unlocks | store 100, replies 150, assets 300, agents 750 |
+| Unlocks | store 100, replies 5, assets 300, agents 750 |
 | Follower share | 11% of reach, × a roll of 0.21–2.83 |
 | Payout | £40 per 1,000 reach |
 | Suspicion | limit 80, cooling 9/day at 100 followers +5 per tenfold |

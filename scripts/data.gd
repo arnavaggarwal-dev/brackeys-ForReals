@@ -16,7 +16,7 @@ const FOLLOW_SECONDS_MAX := 3.67
 const LIKE_IMPACT := 1.0 / 25.0
 const FIRE_IMPACT := 1.0 / 20.0
 
-const COMMENT_UNLOCK := 150
+const COMMENT_UNLOCK := 5
 
 const RECOMMEND_MIN := 3
 const RECOMMEND_MAX := 7
