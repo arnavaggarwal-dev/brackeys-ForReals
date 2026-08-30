@@ -74,6 +74,7 @@ jobs:
       - name: Export ${{ matrix.name }}
         run: |
           set -euxo pipefail
+          rm -rf builds
           mkdir -p "builds/${{ matrix.name }}"
           godot --headless --path . \
             --export-release "${{ matrix.preset }}" \
