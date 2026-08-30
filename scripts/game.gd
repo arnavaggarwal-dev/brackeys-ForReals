@@ -36,6 +36,7 @@ var suspicion := 0.0
 var strikes := 0
 var milestone := 0
 var won := false
+var win_tier := 0
 var endless_mark := 0
 var offline_report: Dictionary = {}
 
@@ -105,6 +106,7 @@ func reset() -> void:
 	strikes = 0
 	milestone = 0
 	won = false
+	win_tier = 0
 	endless_mark = 0
 	offline_report = {}
 	my_posts = []
@@ -187,8 +189,6 @@ func resume() -> void:
 
 
 func keep_going() -> void:
-	# Winning ends the story, not the run. The clock restarts on the day you
-	# were on, and everything else - suspicion, strikes, assets - is untouched.
 	screen = "app"
 	_tick = true
 	screen_changed.emit(screen)
@@ -416,16 +416,11 @@ func _tick_agents(delta: float) -> void:
 
 
 func offline_supported() -> bool:
-	# Only the desktop builds that have a real filesystem and a real clock. The
-	# web export runs in a tab whose storage and wall clock are both negotiable.
 	var os_name := OS.get_name()
 	return os_name == "Windows" or os_name == "Linux"
 
 
 func offline_reach_per_second() -> float:
-	# The same sum _tick_agents pays out, collapsed to a rate: each agent lands
-	# n/every reactions a second, and a reaction carries its impact fraction of
-	# whatever your account currently reaches.
 	var reach := float(projected_reach())
 	var total := 0.0
 	for a: Dictionary in Data.AGENTS:
@@ -438,7 +433,6 @@ func offline_reach_per_second() -> float:
 
 
 func apply_offline(real_seconds: float) -> Dictionary:
-	# Returns what was earned so the caller can report it, or {} for nothing.
 	if not offline_supported() or real_seconds < Data.OFFLINE_MIN_SECONDS:
 		return {}
 	var hours := minf(real_seconds / 3600.0, Data.OFFLINE_MAX_HOURS)
@@ -450,14 +444,13 @@ func apply_offline(real_seconds: float) -> Dictionary:
 		return {}
 
 	var mean_roll: float = (Data.FOLLOWER_ROLL_MIN + Data.FOLLOWER_ROLL_MAX) * 0.5
-	var gained := int(floor(reach_total * mean_roll * 0.35))
+	var gained := int(floor(reach_total * mean_roll * Data.FOLLOWER_SHARE))
 	var earned := reach_total / 1000.0 * Data.PAYOUT_PER_1K
 	if gained <= 0 and earned < 1.0:
 		return {}
 
 	followers += gained
 	payout += earned
-	# They were noticed the whole time, at the same discount as their output.
 	suspicion = clampf(
 		suspicion + agent_suspicion_per_second() * game_seconds,
 		0.0, Data.SUSPICION_LIMIT + 40.0
@@ -845,8 +838,10 @@ func comment_reach() -> int:
 func _react(kind: String, impact: float) -> Dictionary:
 	var reach := int(round(projected_reach() * impact))
 	var gained := int(round(
-		reach * randf_range(Data.FOLLOWER_ROLL_MIN, Data.FOLLOWER_ROLL_MAX) * 0.35
+		reach * randf_range(Data.FOLLOWER_ROLL_MIN, Data.FOLLOWER_ROLL_MAX) * Data.FOLLOWER_SHARE
 	))
+	if reach > 0:
+		gained = maxi(1, gained)
 	suspicion = clampf(
 		suspicion + projected_suspicion() * impact, 0.0, Data.SUSPICION_LIMIT + 40.0
 	)
@@ -932,7 +927,7 @@ func projected_reach() -> int:
 	reach *= 1.0 + 0.75 * caught
 	reach *= Data.ABSURD_REACH if (abilities.has("launder") or not draft_coherent()) 		else Data.COHERENT_REACH
 	reach *= 1.0 + goodwill()
-	reach *= 1.0 + followers / 400.0
+	reach *= Data.AUDIENCE_FLOOR + sqrt(float(followers)) / Data.AUDIENCE_DIVISOR
 	if abilities.has("recursive"):
 		reach *= 1.0 + my_posts.size() * Data.RECURSIVE_PER_POST
 	if abilities.has("scrubbed"):
@@ -977,7 +972,7 @@ func publish() -> void:
 	if not can_post():
 		return
 	var reach := projected_reach()
-	var gained := int(round(reach * randf_range(Data.FOLLOWER_ROLL_MIN, Data.FOLLOWER_ROLL_MAX) * 0.35))
+	var gained := int(round(reach * randf_range(Data.FOLLOWER_ROLL_MIN, Data.FOLLOWER_ROLL_MAX) * Data.FOLLOWER_SHARE))
 	var added_susp := projected_suspicion()
 
 	suspicion = clampf(suspicion + added_susp, 0.0, Data.SUSPICION_LIMIT + 40.0)
@@ -1040,13 +1035,13 @@ func _check_milestone() -> void:
 		toast_requested.emit(
 			"%s - %s" % [milestone_label(m), String(m["title"])], String(m["note"]), false
 		)
-		if not won and int(m["at"]) >= Data.WIN_FOLLOWERS:
-			won = true
-			_finish("won")
-			return
 
-	# Past the written milestones the run keeps going: every doubling of the
-	# win target is announced, and the objective panel tracks the next one.
+	if win_tier < Data.WIN_TIERS.size() and followers >= int(Data.WIN_TIERS[win_tier]):
+		win_tier += 1
+		won = true
+		_finish("won")
+		return
+
 	if not won:
 		return
 	while followers >= endless_target():
@@ -1065,7 +1060,6 @@ func milestone_label(m: Dictionary) -> String:
 
 
 func title() -> String:
-	# The rank you have actually passed, not the one you are working on.
 	if milestone <= 0:
 		return Data.NO_TITLE
 	var reached: int = mini(milestone, Data.MILESTONES.size()) - 1

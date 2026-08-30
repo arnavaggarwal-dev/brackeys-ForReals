@@ -4,7 +4,7 @@
 
 You sign up for a social network with two followers and a handle you can never
 change. You get **one post a day**, a day is **thirty seconds**, and the whole run to
-five thousand followers takes about **ten minutes**. Reaching it ends the story, not
+five thousand followers takes about **half an hour**. Reaching it ends the story, not
 the account - you can take the ending and keep posting.
 
 For three days you post honestly. It does fine. It does not do well.
@@ -64,8 +64,8 @@ land, and nobody had to explain any of them.
   topic table, so an account reads as one person: `coldchain_data`, "Cold Chain",
   *"the study says what i need it to say"*, `#science`. The roll is seeded by run and
   day, so reloading a save offers the same faces.
-- **Reacting is posting at a discount.** A like carries **a tenth** of your reach, a
-  fire **an eighth**, a reply **a third** - each earning followers and payout on the
+- **Reacting is posting at a discount.** A like carries **a 25th** of your reach, a
+  fire **a 20th**, a reply **an eighth** - each earning followers and payout on the
   same log-normal curve a post does, and costing the same fraction of suspicion.
   Once each per post. Replies unlock at **150 followers**.
 - **Your feed is empty until you follow somebody.** Nothing reaches you that you did
@@ -260,7 +260,7 @@ badge in the Today window reads `live - wikipedia` or `offline - shuffled`.
 ### The store and the payout
 
 **Money comes from one place: your own posts travelling.** The platform pays a
-**creator payout** of £300 per 1,000 reach, and like followers it does not arrive all at
+**creator payout** of £40 per 1,000 reach, and like followers it does not arrive all at
 once  it trickles in on the same log-normal curve while the post is still going. Reach
 further, earn more. Nothing else in the game earns anything: following, liking and
 waiting are all free and all pay nothing.
@@ -293,14 +293,14 @@ payout, each getting 15% dearer every time you buy one:
 
 | Asset | From | Produces | Suspicion/sec |
 | --- | --- | --- | --- |
-| Burner account | £8 | 0.15 followers/sec | 0.085 |
-| Comment farm | £30 | 1.0 followers/sec | 0.170 |
+| Burner account | £8 | 0.05 followers/sec | 0.085 |
+| Comment farm | £30 | 0.30 followers/sec | 0.170 |
 | **Scheduling suite** | £60 | **+1 post per day** | 0.250 |
-| Engagement pod | £90 | 6.5 followers/sec | 0.300 |
-| Bot swarm | £170 | 42 followers/sec | 0.475 |
-| Sockpuppet network | £320 | 260 followers/sec | 0.700 |
-| Programmatic ad buy | £600 | 1,600 followers/sec | 0.950 |
-| Media partner | £1,400 | 10,000 followers/sec | 1.300 |
+| Engagement pod | £90 | 1.6 followers/sec | 0.300 |
+| Bot swarm | £170 | 9 followers/sec | 0.475 |
+| Sockpuppet network | £320 | 45 followers/sec | 0.700 |
+| Programmatic ad buy | £600 | 220 followers/sec | 0.950 |
+| Media partner | £1,400 | 1,100 followers/sec | 1.300 |
 
 The **scheduling suite** is the one that is not idle: each one buys another post in
 the day, and it grows at **4x** per purchase rather than 1.15x, because the day does
@@ -313,8 +313,8 @@ late game.
 
 ### Heat, and the ceiling
 
-Cooling is **5 a day at 100 followers, rising 5 per tenfold** - 10 a day at a
-thousand, 13.5 at five. A big account gets the benefit of the doubt it never gave you at two
+Cooling is **9 a day at 100 followers, rising 5 per tenfold** - 14 a day at a
+thousand, 17.5 at five. A big account gets the benefit of the doubt it never gave you at two
 followers. The Assets panel shows the only number that matters:
 
 ```
@@ -365,7 +365,7 @@ Their output scales with your reach, so unlike the flat-rate assets they keep pa
 with the account.
 
 Prices across both panels are set against what a run actually earns. The payout is
-**£300 per 1,000 reach** and a run to 5,000 followers moves a few tens of thousands of
+**£40 per 1,000 reach** and a run to 5,000 followers moves a few hundred thousand
 reach, so the ladder tops out at **£1,400** and the first agent costs **£45**. Anything
 priced above that curve is content nobody ever sees.
 
@@ -435,7 +435,7 @@ That last line is the one act zero opens on, before you have any idea what it me
 ### Suspicion and strikes
 
 Every post adds `middle + end` suspicion, times **0.60** if the claim is checkable or
-**1.35** if it is not. It decays 5 a day at 100 followers and faster as you grow (see
+**1.35** if it is not. It decays 9 a day at 100 followers and faster as you grow (see
 above). While it is up, reach is multiplied by
 `1 - suspicion/220`, floored at 25%.
 
@@ -457,12 +457,51 @@ and followers are all that curve times the post's lifetime total, so a fresh pos
 reads `+4 still going` and the same post two days later reads `+1,204`.
 
 Followers are the one slice that is not predictable: the lifetime total is
-`reach x 0.35` times a roll of **0.21 to 2.83**, so the same draft can land anywhere
+`reach x 0.11` times a roll of **0.21 to 2.83**, so the same draft can land anywhere
 from a fifth of what it looks worth to nearly three times it. That is why the composer
 shows reach and payout but never a follower count - the number does not exist yet.
 
 Timestamps run on the same fiction: one game second is 48 minutes, so a 30-second day
 reads as a 24-hour one and posts are stamped `20m ago`, `6h ago`, `2d ago`.
+
+### The growth curve
+
+How loud your account already is multiplies everything it posts next, and the shape of
+that term is the whole pacing of the game:
+
+```
+reach *= AUDIENCE_FLOOR + sqrt(followers) / AUDIENCE_DIVISOR
+```
+
+This used to be `1 + followers / 400`, which is **linear in followers** - compound
+interest. Every post paid out in proportion to what the last one earned, so the curve
+went vertical and the run was over in ten days. Square root instead means each new
+follower is worth less than the one before: a big account is meaningfully louder than a
+small one, but it never runs away.
+
+`AUDIENCE_FLOOR` is where the curve starts, and at **0.12** it means a brand new
+account is not amplified, it is muffled. That number is the difference between
+reaching 100 followers on day 3 and reaching it in a week, which is the point - the
+first days are supposed to do fine and not do well.
+
+Simulated over seven runs of competent play: **100 followers around day 6, 600 by day
+18, 3,000 by day 46, and the win around day 55** - a little under half an hour. Playing
+purely for reach and ignoring the bar gets you banned around day 20 instead.
+
+### Balance
+
+`godot --headless --balance` plays the run the way a competent player would - the
+loudest sentence in the hand it can afford the heat for, a few reactions, assets bought
+by heat efficiency - and reports days to win, ban rate and where each milestone landed:
+
+```
+run 1: won  day  55  10,663 followers  0 strikes  100@d6 600@d18 3.0K@d46 5.0K@d55
+BALANCE: won 7/7 - median day 55, mean 55.7
+BALANCE: that is 27.9 minutes of play at 30s a day
+```
+
+Tuning an economy by feel is how it ended up winnable in five minutes. This is the
+number to tune against.
 
 ### Tuning
 

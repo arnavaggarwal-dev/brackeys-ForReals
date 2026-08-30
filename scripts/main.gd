@@ -29,6 +29,7 @@ var taskbar: Taskbar
 
 var toast_layer: VBoxContainer
 var veil: Control
+var menu_layer: Control
 
 var _drift := 0.0
 
@@ -46,13 +47,14 @@ func _ready() -> void:
 	Game.screen_changed.connect(_on_screen)
 	NukeScreen.warm()
 
-	if DevTour.shots_only():
+	if DevTour.balance_only():
+		DevTour.run_balance()
+		get_tree().quit()
+	elif DevTour.shots_only():
 		DevTour.run_shots()
 	elif DevTour.nuke_only():
 		DevTour.run_nuke()
 	elif not DevTour.enabled() and Save.load_game():
-		# Loading can end the run outright if the people you hired filled the
-		# suspicion bar while you were away - in that case leave the ending up.
 		if Game.screen != "over":
 			Game.resume()
 			Game.toast_requested.emit(
@@ -183,8 +185,14 @@ func _build() -> void:
 
 	veil = Control.new()
 	veil.set_anchors_preset(Control.PRESET_FULL_RECT)
+	veil.offset_bottom = -TASKBAR_H
 	veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(veil)
+
+	menu_layer = Control.new()
+	menu_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	menu_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(menu_layer)
 
 
 func _scroller() -> ScrollContainer:
@@ -349,6 +357,19 @@ func restart() -> void:
 func quit_game() -> void:
 	Save.write()
 	get_tree().quit()
+
+
+func mount_menu(node: Control) -> void:
+	clear_menu()
+	menu_layer.mouse_filter = Control.MOUSE_FILTER_STOP
+	node.set_anchors_preset(Control.PRESET_FULL_RECT)
+	menu_layer.add_child(node)
+
+
+func clear_menu() -> void:
+	for c in menu_layer.get_children():
+		c.queue_free()
+	menu_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
 func clear_veil() -> void:

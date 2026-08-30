@@ -21,7 +21,7 @@ static func close() -> void:
 	if not _open:
 		return
 	_open = false
-	AppShell.i.clear_veil()
+	AppShell.i.clear_menu()
 
 
 static func show_menu() -> void:
@@ -76,7 +76,7 @@ static func show_menu() -> void:
 	frame.add_child(row)
 	root.add_child(frame)
 
-	AppShell.i.mount_veil(root)
+	AppShell.i.mount_menu(root)
 	Sfx.tick()
 
 

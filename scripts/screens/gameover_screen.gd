@@ -11,8 +11,6 @@ static func show_over() -> void:
 
 	var won := outcome == "won"
 
-	# Winning leaves the account open, so the title bar X drops you back into
-	# the run. Losing has nowhere to go, so it does nothing.
 	var on_close := func() -> void: pass
 	if won:
 		on_close = func() -> void:
@@ -112,12 +110,26 @@ static func _ousted_score() -> Control:
 
 static func _body_text(won: bool) -> String:
 	if won:
-		return ("%s people read whatever you type next.\n\n"
+		var tail := ("Nobody is coming to correct it. That was never how any of this "
+			+ "worked. The account is still open, if you want it.")
+		if Game.win_tier >= 3:
+			tail = ("There is nobody left outside the room. Every correction now has "
+				+ "to be checked against you, because you are what it would be "
+				+ "checked against. The account is still open. It always was.")
+		elif Game.win_tier == 2:
+			tail = ("Your version is the one that gets cited now, and the earlier one "
+				+ "is a footnote nobody follows up. The account is still open, if you "
+				+ "want to see how much further this goes.")
+		return ("%s people read whatever you type next.
+
+"
 			+ "You did not lie about everything. You lied in %d of the %d things "
-			+ "you posted, and the rest was there to make those ones look normal.\n\n"
-			+ "Nobody is coming to correct it. That was never how any of this "
-			+ "worked. The account is still open, if you want it.") % [
-				Game.commas(Game.followers), _charged_count(), Game.my_posts.size()
+			+ "you posted, and the rest was there to make those ones look normal.
+
+"
+			+ "%s") % [
+				Game.commas(Game.followers), _charged_count(),
+				Game.my_posts.size(), tail
 			]
 	return ("This program has performed an illegal operation and will be shut down.\n\n"
 		+ "Three strikes. The trust team has removed @%s and everything on it. "

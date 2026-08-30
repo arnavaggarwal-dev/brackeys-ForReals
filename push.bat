@@ -2,20 +2,14 @@
 setlocal EnableDelayedExpansion
 cd /d "%~dp0"
 
-REM ---------------------------------------------------------------------------
-REM  push.bat - commit everything and push to GitHub.
-REM
-REM    push.bat                        commit with a timestamp message
-REM    push.bat "fixed the composer"   commit with your own message
-REM    push.bat "v1 build" v1.0.0      ...and tag it, which fires the release
-REM                                    workflow and publishes the exports
-REM ---------------------------------------------------------------------------
-
 set "REMOTE_URL=https://github.com/arnavaggarwal-dev/brackeys-ForReals.git"
 set "BRANCH=main"
+set "ITCH_TARGET=CHANGEME/for-reals"
+set "BUTLER=%USERPROFILE%\tools\butler\butler.exe"
 
 set "MESSAGE=%~1"
 set "TAG=%~2"
+set "ITCH=%~3"
 
 if "%MESSAGE%"=="" (
     for /f "tokens=* usebackq" %%d in (`powershell -NoProfile -Command "Get-Date -Format 'yyyy-MM-dd HH:mm'"`) do set "MESSAGE=work in progress - %%d"
@@ -26,10 +20,9 @@ echo === ForReals =============================================================
 echo   branch  : %BRANCH%
 echo   message : !MESSAGE!
 if not "%TAG%"=="" echo   tag     : %TAG%  (this will publish a release)
+if /i "%ITCH%"=="itch" echo   itch    : %ITCH_TARGET%
 echo ==========================================================================
 echo.
-
-REM --- sanity checks --------------------------------------------------------
 
 git rev-parse --git-dir >nul 2>&1
 if errorlevel 1 (
@@ -47,16 +40,12 @@ if errorlevel 1 (
 
 git lfs install --local >nul 2>&1
 
-REM --- make sure a remote exists --------------------------------------------
-
 git remote get-url origin >nul 2>&1
 if errorlevel 1 (
     echo [*] No 'origin' remote yet - pointing it at %REMOTE_URL%
     git remote add origin "%REMOTE_URL%"
     if errorlevel 1 goto :fail
 )
-
-REM --- stage and commit -----------------------------------------------------
 
 echo [*] Staging...
 git add -A
@@ -81,9 +70,7 @@ echo [*] Pushing LFS objects and commits to %BRANCH% ^(this is the slow part^)..
 git push -u origin %BRANCH%
 if errorlevel 1 goto :fail
 
-REM --- optional tag, which triggers .github/workflows/release.yml ------------
-
-if "%TAG%"=="" goto :done
+if "%TAG%"=="" goto :itch
 
 echo [*] Tagging %TAG%...
 git tag -a "%TAG%" -m "!MESSAGE!"
@@ -98,6 +85,58 @@ if errorlevel 1 goto :fail
 echo.
 echo [+] Tag pushed. GitHub is now exporting Windows, Linux, macOS and web.
 echo     Watch it: https://github.com/arnavaggarwal-dev/brackeys-ForReals/actions
+
+:itch
+if /i not "%ITCH%"=="itch" goto :done
+
+echo.
+echo [*] Uploading builds to itch.io...
+
+if "%ITCH_TARGET%"=="CHANGEME/for-reals" (
+    echo [X] Edit this script and set ITCH_TARGET to your itch.io user/game slug.
+    echo     The slug is the last part of the page URL, not the display title.
+    goto :fail
+)
+
+if not exist "%BUTLER%" (
+    echo [X] butler not found at %BUTLER%
+    echo     Get it from https://itch.io/docs/butler/installing.html
+    goto :fail
+)
+
+"%BUTLER%" login >nul 2>&1
+if errorlevel 1 (
+    echo [X] butler is not logged in. Run:  "%BUTLER%" login
+    goto :fail
+)
+
+if not exist "builds\windows\ForReals.exe" (
+    echo [X] No builds found to upload. Export them first - see the README.
+    goto :fail
+)
+
+set "VFLAG="
+if not "%TAG%"=="" set "VFLAG=--userversion %TAG:v=%"
+
+echo [*] itch: Windows...
+"%BUTLER%" push "builds\windows" "%ITCH_TARGET%:windows" %VFLAG%
+if errorlevel 1 goto :fail
+
+echo [*] itch: Linux...
+"%BUTLER%" push "builds\Linux" "%ITCH_TARGET%:linux" %VFLAG%
+if errorlevel 1 goto :fail
+
+echo [*] itch: web...
+"%BUTLER%" push "builds\web" "%ITCH_TARGET%:html" %VFLAG%
+if errorlevel 1 goto :fail
+
+echo.
+"%BUTLER%" status "%ITCH_TARGET%"
+echo.
+echo     macOS is not uploaded from here - it cannot be exported on Windows.
+echo     Once the release finishes building:
+echo       gh release download %TAG% -p "ForReals-macos.zip"
+echo       "%BUTLER%" push ForReals-macos.zip %ITCH_TARGET%:osx
 
 :done
 echo.

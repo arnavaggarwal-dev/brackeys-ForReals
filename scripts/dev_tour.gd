@@ -13,6 +13,206 @@ static func shots_only() -> bool:
 	return OS.get_cmdline_args().has("--shots")
 
 
+static func balance_only() -> bool:
+	return OS.get_cmdline_args().has("--balance")
+
+
+const BALANCE_RUNS := 7
+const BALANCE_MAX_DAYS := 400
+const BALANCE_REACTS := 3.0
+
+
+static func run_balance() -> void:
+	print("BALANCE: %d runs, win at %s followers, day = %ds" % [
+		BALANCE_RUNS, Game.commas(Data.WIN_FOLLOWERS), int(Data.DAY_BASE_SECONDS)
+	])
+
+	var shell := AppShell.i
+	if Game.view_dirty.is_connected(shell._on_view_dirty):
+		Game.view_dirty.disconnect(shell._on_view_dirty)
+	if Game.nav_dirty.is_connected(shell._on_view_dirty):
+		Game.nav_dirty.disconnect(shell._on_view_dirty)
+	if Game.toast_requested.is_connected(shell.show_toast):
+		Game.toast_requested.disconnect(shell.show_toast)
+	if Game.screen_changed.is_connected(shell._on_screen):
+		Game.screen_changed.disconnect(shell._on_screen)
+	if Game.glitch.is_connected(shell.shake):
+		Game.glitch.disconnect(shell.shake)
+
+	var wins: Array[int] = []
+	var banned := 0
+	for r in BALANCE_RUNS:
+		var out := _simulate(r)
+		if String(out["how"]) == "won":
+			wins.append(int(out["days"]))
+		else:
+			banned += 1
+		var pace: Dictionary = out["pace"]
+		var marks := PackedStringArray()
+		for at: int in [100, 600, 3000, 5000]:
+			marks.append("%s@d%s" % [Game.compact(at), str(pace.get(at, "-"))])
+		print("  run %d: %-6s day %3d  %8s followers  %d strikes   %s" % [
+			r + 1, out["how"], int(out["days"]),
+			Game.commas(int(out["followers"])), int(out["strikes"]),
+			" ".join(marks)
+		])
+
+	if wins.is_empty():
+		print("BALANCE: no run reached the target - the economy is unwinnable")
+		return
+	wins.sort()
+	var total := 0
+	for d in wins:
+		total += d
+	var mean := float(total) / float(wins.size())
+	print("BALANCE: won %d/%d - median day %d, mean %.1f" % [
+		wins.size(), BALANCE_RUNS, wins[wins.size() / 2], mean
+	])
+	print("BALANCE: that is %.1f minutes of play at %ds a day" % [
+		mean * Data.DAY_BASE_SECONDS / 60.0, int(Data.DAY_BASE_SECONDS)
+	])
+	if banned > 0:
+		print("BALANCE: %d run(s) hit three strikes first" % banned)
+
+
+static func _simulate(seed_index: int) -> Dictionary:
+	Game.reset()
+	Game.run_id = seed_index * 31 + 7
+	Game.screen = "app"
+	Game.followers = 2
+	Game.suspicion = 0.0
+	Game.strikes = 0
+	var mean_roll: float = (Data.FOLLOWER_ROLL_MIN + Data.FOLLOWER_ROLL_MAX) * 0.5
+	var strikes := 0
+	var pace: Dictionary = {}
+
+	for day in range(1, BALANCE_MAX_DAYS + 1):
+		Game.day = day
+		Game.posts_today = 0
+		Game.likes_given_today = int(BALANCE_REACTS)
+		Game.roll_trends()
+		Game.deal_hand()
+		_best_draft()
+
+		var posts := Game.posts_per_day()
+		var reach := float(Game.projected_reach())
+		var susp := Game.projected_suspicion()
+
+		var earned := reach * float(posts)
+		var heat := susp * float(posts)
+
+		var frac := Data.LIKE_IMPACT + Data.FIRE_IMPACT
+		if Game.comments_open():
+			frac += Data.COMMENT_IMPACT
+		frac *= BALANCE_REACTS
+		var room: float = Data.SUSPICION_LIMIT - Game.suspicion - heat
+		if susp * frac > room:
+			frac = maxf(0.0, room / maxf(0.01, susp))
+		earned += reach * frac
+		heat += susp * frac
+
+		Game.followers += int(earned * mean_roll * Data.FOLLOWER_SHARE)
+		Game.payout += earned / 1000.0 * Data.PAYOUT_PER_1K
+
+		Game.followers += int(Game.followers_per_second() * Data.DAY_BASE_SECONDS)
+		heat += Game.heat_per_second() * Data.DAY_BASE_SECONDS
+
+		Game.suspicion = maxf(0.0, Game.suspicion + heat - Game.daily_cooling())
+		if Game.suspicion >= Data.SUSPICION_LIMIT:
+			strikes += 1
+			Game.followers = int(Game.followers * (1.0 - Data.STRIKE_LOSS))
+			Game.suspicion = Data.STRIKE_RESET
+			if strikes >= Data.STRIKES_ALLOWED:
+				return {
+					"how": "banned", "days": day,
+					"followers": Game.followers, "strikes": strikes, "pace": pace,
+				}
+
+		Game._check_store()
+		Game._check_comments()
+		Game._check_assets()
+		Game._check_agents()
+		_buy_greedy()
+
+		for m: Dictionary in Data.MILESTONES:
+			var at := int(m["at"])
+			if at <= Data.WIN_FOLLOWERS and Game.followers >= at and not pace.has(at):
+				pace[at] = day
+
+		if Game.followers >= Data.WIN_FOLLOWERS:
+			return {
+				"how": "won", "days": day,
+				"followers": Game.followers, "strikes": strikes, "pace": pace,
+			}
+
+	return {
+		"how": "stalled", "days": BALANCE_MAX_DAYS,
+		"followers": Game.followers, "strikes": strikes, "pace": pace,
+	}
+
+
+static func _best_draft() -> void:
+	var headroom: float = Data.SUSPICION_LIMIT - Game.suspicion
+
+	var spend_mult := float(Game.posts_per_day())
+	spend_mult += (Data.LIKE_IMPACT + Data.FIRE_IMPACT) * BALANCE_REACTS
+	if Game.comments_open():
+		spend_mult += Data.COMMENT_IMPACT * BALANCE_REACTS
+
+	var asset_heat: float = Game.heat_per_second() * Data.DAY_BASE_SECONDS
+	var budget: float = maxf(0.0, Game.daily_cooling() - asset_heat + headroom * 0.02)
+	budget /= maxf(0.5, spend_mult)
+
+	var best := -1.0
+	var pick := ["", "", ""]
+	var safest := 1e9
+	var fallback := ["", "", ""]
+
+	for s: Dictionary in Game.hand_for("start"):
+		for m: Dictionary in Game.hand_for("middle"):
+			for e: Dictionary in Game.hand_for("end"):
+				Game.set_fragment("start", String(s["id"]))
+				Game.set_fragment("middle", String(m["id"]))
+				Game.set_fragment("end", String(e["id"]))
+				var sp := Game.projected_suspicion()
+				var r := float(Game.projected_reach())
+				var ids := [String(s["id"]), String(m["id"]), String(e["id"])]
+				if sp < safest:
+					safest = sp
+					fallback = ids
+				if sp <= budget and r > best:
+					best = r
+					pick = ids
+
+	if best < 0.0:
+		pick = fallback
+	Game.set_fragment("start", pick[0])
+	Game.set_fragment("middle", pick[1])
+	Game.set_fragment("end", pick[2])
+
+
+static func _buy_greedy() -> void:
+	for pass_i in 8:
+		var best: Dictionary = {}
+		var best_eff := 0.0
+		if Game.assets_open():
+			for a: Dictionary in Data.ASSETS:
+				if not Game.can_afford_asset(a) or float(a["susp"]) <= 0.0:
+					continue
+				var fps := float(a.get("fps", 0.0))
+				if fps <= 0.0:
+					continue
+				var eff := fps / float(a["susp"])
+				if eff > best_eff:
+					best_eff = eff
+					best = a
+		if best.is_empty():
+			return
+		if Game.heat_ratio() > 0.60:
+			return
+		Game.buy_asset(best, 1)
+
+
 const SHOT_DIR := "res://itchpush/screenshots"
 const SHOT_SIZE := Vector2i(1664, 936)
 
@@ -28,10 +228,6 @@ static func _snap(name: String) -> void:
 	print("SHOT: %s  %dx%d" % [name, img.get_width(), img.get_height()])
 
 
-# `godot --shots` drives the game to five representative states and writes a PNG
-# of each into itchpush/screenshots. Five, because that is what a store page can
-# actually use - the desktop, the two things you spend the run doing, the state
-# the idle half puts you in, and the ending.
 static func run_shots() -> void:
 	var tree := AppShell.i.get_tree()
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
@@ -52,8 +248,6 @@ static func run_shots() -> void:
 	Game._populate_feed()
 	Game.deal_hand()
 
-	# A history of your own, so the ending has something to summarise and the
-	# left column has something still travelling.
 	Game.owned = {"caused": true, "hiding": true, "leak": true}
 	for i in 4:
 		Game.posts_today = 0
@@ -67,8 +261,6 @@ static func run_shots() -> void:
 	Game.view_dirty.emit()
 	await _snap("01-desktop")
 
-	# The composer, mid-sentence, with the projection showing. The day's post
-	# has to be unspent or the composer refuses to open at all.
 	Game.posts_today = 0
 	Game.deal_hand()
 	Composer.open()
@@ -82,14 +274,12 @@ static func run_shots() -> void:
 	Composer.close()
 	await tree.create_timer(0.4).timeout
 
-	# The store. The whole point of the game is on this screen.
 	Store.open()
 	await tree.create_timer(0.8).timeout
 	await _snap("03-store")
 	Store.close()
 	await tree.create_timer(0.4).timeout
 
-	# Late run: things you own, heat you cannot cool, a display coming apart.
 	Game.followers = 4_180
 	Game.payout = 1_460.0
 	Game.assets = {"burner": 6, "farm": 4, "pod": 2, "scheduler": 1}
@@ -99,18 +289,13 @@ static func run_shots() -> void:
 	Game.suspicion = 64.0
 	Game.strikes = 1
 	Game.posts_today = 1
-	# Set the rank directly rather than through _check_milestone, whose toasts
-	# would stack over the Assets panel this shot exists to show.
 	Game.milestone = 7
 	Game.view_dirty.emit()
 	Game.glitch.emit(0.45)
 	await tree.create_timer(1.0).timeout
 	await _snap("04-heat")
 
-	# The ending, and the title it hands you. Same reason - no toasts over it.
 	Game.followers = Data.WIN_FOLLOWERS
-	# Eight ranks passed at 5,000, so title() reads "public figure" - setting
-	# this to MILESTONES.size() would wrongly crown you "everyone".
 	Game.milestone = 8
 	Game.won = true
 	Game._finish("won")
@@ -287,6 +472,36 @@ static func _check_offline() -> void:
 		print("TOUR: a fortnight away still only pays %d hours" % int(Data.OFFLINE_MAX_HOURS))
 	Game.agents = {}
 	Game._agent_clocks = {}
+
+
+static func _check_menu_at_signin() -> void:
+	var tree := AppShell.i.get_tree()
+	Game.reset()
+	SignInScreen.show_signin()
+	await tree.create_timer(0.5).timeout
+	if find_button(AppShell.i, "community guidelines") == null:
+		push_error("TOUR: sign-in did not come up")
+		return
+
+	StartMenu.show_menu()
+	await tree.create_timer(0.5).timeout
+	if not StartMenu.is_open():
+		push_error("TOUR: the Start menu will not open at the sign-in screen")
+		return
+	if find_button(AppShell.i, "Quit") == null:
+		push_error("TOUR: no way to quit from the sign-in screen")
+		return
+	if find_button(AppShell.i, "community guidelines") == null:
+		push_error("TOUR: opening the Start menu destroyed the sign-in screen")
+		return
+	print("TOUR: the Start menu opens over sign-in without eating it")
+
+	StartMenu.close()
+	await tree.create_timer(0.4).timeout
+	if StartMenu.is_open():
+		push_error("TOUR: the Start menu would not close")
+	if find_button(AppShell.i, "community guidelines") == null:
+		push_error("TOUR: closing the Start menu took sign-in with it")
 
 
 static func _check_save() -> void:
@@ -546,8 +761,6 @@ static func _check_menu() -> void:
 		push_error("TOUR: the tour left the player's audio muted")
 
 
-## The bomb is the heaviest thing in the build. It has to be resident before
-## anybody asks for it, or the web build stalls mid-animation.
 static func _check_warmup() -> void:
 	var tree := AppShell.i.get_tree()
 	if not NukeScreen._warming:
@@ -676,10 +889,12 @@ static func _check_reactions() -> void:
 	else:
 		var like_reach := int(Game.my_reactions[0]["reach"])
 		var fire_reach := int(Game.my_reactions[1]["reach"])
-		if fire_reach <= like_reach:
-			push_error("TOUR: a fire (%d) does not beat a like (%d)" % [fire_reach, like_reach])
+		if Data.FIRE_IMPACT <= Data.LIKE_IMPACT:
+			push_error("TOUR: a fire is not worth more than a like")
+		elif fire_reach < like_reach:
+			push_error("TOUR: a fire (%d) came in under a like (%d)" % [fire_reach, like_reach])
 		else:
-			print("TOUR: like %d, fire %d, reply %d - a tenth, an eighth, a third" % [
+			print("TOUR: like %d, fire %d, reply %d - 1/25, 1/20, 1/8 of a post" % [
 				like_reach, fire_reach, Game.comment_reach()
 			])
 
@@ -1083,6 +1298,7 @@ static func run() -> void:
 
 	await tree.create_timer(1.0).timeout
 	_check_save()
+	await _check_menu_at_signin()
 
 	Composer.open()
 	await tree.create_timer(1.6).timeout

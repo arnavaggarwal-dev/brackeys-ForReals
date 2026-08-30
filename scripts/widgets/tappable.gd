@@ -62,8 +62,6 @@ func is_enabled() -> bool:
 
 func set_enabled(v: bool) -> void:
 	_enabled = v
-	# A dead control still swallows the click - it answers with the error buzz
-	# instead of silently doing nothing.
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	mouse_default_cursor_shape = (
 		Control.CURSOR_POINTING_HAND if v else Control.CURSOR_ARROW

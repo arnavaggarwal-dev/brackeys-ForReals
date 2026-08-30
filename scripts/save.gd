@@ -3,10 +3,12 @@ extends Node
 const PATH := "user://forreals.save"
 const VERSION := 2
 const AUTOSAVE_SECONDS := 5.0
+const HEARTBEAT_SECONDS := 60.0
 
 var persistent := true
 var _dirty := false
 var _since := 0.0
+var _heartbeat := 0.0
 
 
 func _ready() -> void:
@@ -26,6 +28,12 @@ func _notification(what: int) -> void:
 
 
 func _process(delta: float) -> void:
+	if Game.screen == "app":
+		_heartbeat += delta
+		if _heartbeat >= HEARTBEAT_SECONDS:
+			_heartbeat = 0.0
+			write()
+			return
 	if not _dirty:
 		return
 	_since += delta
@@ -57,6 +65,7 @@ func clear() -> void:
 func write() -> void:
 	_dirty = false
 	_since = 0.0
+	_heartbeat = 0.0
 	if Game.screen != "app":
 		return
 	var f := FileAccess.open(PATH, FileAccess.WRITE)
@@ -105,6 +114,7 @@ func _snapshot() -> Dictionary:
 		"strikes": Game.strikes,
 		"milestone": Game.milestone,
 		"won": Game.won,
+		"win_tier": Game.win_tier,
 		"endless_mark": Game.endless_mark,
 		"payout": Game.payout,
 		"owned": Game.owned,
@@ -167,6 +177,7 @@ func _restore(d: Dictionary) -> void:
 	Game.strikes = int(d.get("strikes", 0))
 	Game.milestone = int(d.get("milestone", 0))
 	Game.won = bool(d.get("won", false))
+	Game.win_tier = int(d.get("win_tier", 1 if Game.won else 0))
 	Game.endless_mark = int(d.get("endless_mark", 0))
 	Game.payout = float(d.get("payout", 0.0))
 	Game.owned = d.get("owned", {})
@@ -193,8 +204,6 @@ func _restore(d: Dictionary) -> void:
 	Game.my_posts = (d.get("my_posts", []) as Array).map(_rehydrate)
 	Game.feed = (d.get("feed", []) as Array).map(_rehydrate)
 
-	# Anyone you hired kept working while the game was shut. A clock that went
-	# backwards (timezone change, a fiddled system clock) earns nothing.
 	var away := Time.get_unix_time_from_system() - float(d.get("at_wall", 0.0))
 	Game.offline_report = Game.apply_offline(away) if away > 0.0 else {}
 

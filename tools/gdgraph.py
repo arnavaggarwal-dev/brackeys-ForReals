@@ -92,7 +92,6 @@ def build(files: dict) -> tuple[list, list]:
 
     seen = defaultdict(lambda: {"n": 0, "rel": ""})
     for rel, info in files.items():
-        # a script referencing another class by name
         if info["code"]:
             for cls, target in owner.items():
                 if target == rel:
@@ -114,7 +113,6 @@ def build(files: dict) -> tuple[list, list]:
                 key = (rel, owner[info["extends"]])
                 seen[key]["rel"] = "extends"
                 seen[key]["n"] = max(seen[key]["n"], 1)
-        # a file naming a resource path
         for res in info["resources"]:
             target = res.replace("res://", "")
             if target in files and target != rel:

@@ -5,17 +5,23 @@ const DAY_MIN_SECONDS := 6.0
 const FOLLOWER_ROLL_MIN := 0.21
 const FOLLOWER_ROLL_MAX := 2.83
 
+const FOLLOWER_SHARE := 0.11
+
+const AUDIENCE_DIVISOR := 40.0
+
+const AUDIENCE_FLOOR := 0.12
+
 const FOLLOW_SECONDS_MIN := 0.3
 const FOLLOW_SECONDS_MAX := 3.67
-const LIKE_IMPACT := 1.0 / 10.0
-const FIRE_IMPACT := 1.0 / 8.0
+const LIKE_IMPACT := 1.0 / 25.0
+const FIRE_IMPACT := 1.0 / 20.0
 
 const COMMENT_UNLOCK := 150
 
 const RECOMMEND_MIN := 3
 const RECOMMEND_MAX := 7
 const FEED_FOLLOW_WINDOW := 7
-const COMMENT_IMPACT := 1.0 / 3.0
+const COMMENT_IMPACT := 1.0 / 8.0
 
 const PROLOGUE_HANDLE := "rt_hon_marsh"
 const PROLOGUE_NAME := "Rt Hon. A. Marsh MP"
@@ -43,12 +49,12 @@ const ASSET_GROWTH := 1.15
 const ASSETS := [
 	{
 		"id": "burner", "name": "Burner account", "cost": 8.0,
-		"fps": 0.15, "susp": 0.085,
+		"fps": 0.05, "susp": 0.085,
 		"note": "one more of you, agreeing with you",
 	},
 	{
 		"id": "farm", "name": "Comment farm", "cost": 30.0,
-		"fps": 1.0, "susp": 0.170,
+		"fps": 0.30, "susp": 0.170,
 		"note": "paid to agree, in bulk, from a room somewhere",
 	},
 	{
@@ -58,27 +64,27 @@ const ASSETS := [
 	},
 	{
 		"id": "pod", "name": "Engagement pod", "cost": 90.0,
-		"fps": 6.5, "susp": 0.300,
+		"fps": 1.60, "susp": 0.300,
 		"note": "twelve accounts that like each other on a schedule",
 	},
 	{
 		"id": "swarm", "name": "Bot swarm", "cost": 170.0,
-		"fps": 42.0, "susp": 0.475,
+		"fps": 9.0, "susp": 0.475,
 		"note": "they do not read it. they never did",
 	},
 	{
 		"id": "sock", "name": "Sockpuppet network", "cost": 320.0,
-		"fps": 260.0, "susp": 0.700,
+		"fps": 45.0, "susp": 0.700,
 		"note": "each one has a birthday and a dog",
 	},
 	{
 		"id": "adbuy", "name": "Programmatic ad buy", "cost": 600.0,
-		"fps": 1_600.0, "susp": 0.950,
+		"fps": 220.0, "susp": 0.950,
 		"note": "your post, in front of people who did not follow you",
 	},
 	{
 		"id": "partner", "name": "Media partner", "cost": 1_400.0,
-		"fps": 10_000.0, "susp": 1.300,
+		"fps": 1_100.0, "susp": 1.300,
 		"note": "a real newsroom repeats you without checking",
 	},
 ]
@@ -104,9 +110,6 @@ const AGENTS := [
 
 const QUIET_DAY_RELIEF := 20.0
 
-# People you hired keep working when the game is shut. One real hour away buys one
-# game day of their output, capped at eight, and they work at a fifth of the rate
-# they manage while you are watching. Desktop only - see Game.offline_supported().
 const OFFLINE_HOURS_PER_DAY := 1.0
 const OFFLINE_MAX_HOURS := 8.0
 const OFFLINE_RATE := 0.20
@@ -114,9 +117,9 @@ const OFFLINE_MIN_SECONDS := 120.0
 
 const BULK_STEPS := [1, 10, 25]
 
-const PAYOUT_PER_1K := 300.0
+const PAYOUT_PER_1K := 40.0
 const SUSPICION_LIMIT := 80.0
-const SUSPICION_DECAY := 5.0
+const SUSPICION_DECAY := 9.0
 
 const SUSPICION_DECAY_PER_DECADE := 5.0
 const STRIKES_ALLOWED := 3
@@ -125,6 +128,7 @@ const STRIKE_LOSS := 0.30
 const STRIKE_RESET := 50.0
 const SILENT_DAY_LOSS := 0.015
 const WIN_FOLLOWERS := 5_000
+const WIN_TIERS := [5_000, 1_000_000, 1_000_000_000]
 
 const ENGAGEMENT_HALFLIFE := 8.0
 const ENGAGEMENT_SIGMA := 0.9
@@ -338,9 +342,6 @@ const TAGS := [
 
 const CHARGED_TAGS := ["#wakeup", "#research", "#receipts"]
 
-# Every tag answers to a topic, so live Wikimedia weight reaches the whole
-# vocabulary rather than the six topic tags. The seven meta tags are filed
-# under whichever topic their fragments actually talk about.
 const TAG_TOPICS := {
 	"#sport":      "sport",
 	"#war":        "war",
@@ -372,9 +373,6 @@ const ACCOUNTS := [
 	{"h": "forreals_staff", "n": "ForReals Staff",  "topic": "politics",   "followers": 9_900_000, "at": 600_000},
 ]
 
-# The rank ladder. `title` is what the profile panel calls you; the run is won at
-# WIN_FOLLOWERS but the ladder keeps going to a billion, because the machine you
-# built does not stop when the story does.
 const NO_TITLE := "nobody"
 
 const MILESTONES := [
