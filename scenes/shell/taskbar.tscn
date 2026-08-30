@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/shell/taskbar.gd" id="1_taskbar"]
+
+[node name="Taskbar" type="PanelContainer"]
+custom_minimum_size = Vector2(0, 34)
+script = ExtResource("1_taskbar")

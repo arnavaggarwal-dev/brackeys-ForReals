@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/widgets/sprite_anim.gd" id="1_anim"]
+
+[node name="SpriteAnim" type="TextureRect"]
+custom_minimum_size = Vector2(16, 16)
+texture_filter = 1
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+script = ExtResource("1_anim")
+sheet = "heart"
+px = 16.0
+looping = true
+fps = 0.0

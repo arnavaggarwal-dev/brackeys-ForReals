@@ -1,0 +1,151 @@
+name: Release
+
+# Tag a commit and the exports build themselves:
+#   git tag v1.0.0 && git push origin v1.0.0
+# or run it by hand from the Actions tab against any branch.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  GODOT_VERSION: "4.7.1"
+  PROJECT_NAME: "ForReals"
+
+jobs:
+  export:
+    name: Export ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # macOS is the whole reason this workflow exists - it cannot be
+          # exported from a Windows machine, but it exports fine from Linux.
+          - name: macos
+            preset: "macOS"
+            out: "ForReals.zip"
+            repack: false
+          - name: windows
+            preset: "Windows Desktop"
+            out: "ForReals.exe"
+            repack: true
+          - name: linux
+            preset: "Linux"
+            out: "ForReals.x86_64"
+            repack: true
+          - name: web
+            preset: "Web"
+            out: "index.html"
+            repack: true
+
+    steps:
+      - name: Check out the project
+        uses: actions/checkout@v4
+        with:
+          # Deliberately NOT lfs:true. The only things in LFS are the committed
+          # binaries in builds/, which this job rebuilds from source anyway.
+          # Fetching them would burn ~311 MB of the LFS bandwidth quota on every
+          # run, four times over, to download files we immediately overwrite.
+          lfs: false
+
+      - name: Fetch the source assets that live in LFS
+        # The game's own assets - the bomb, the fonts, the audio - are LFS too,
+        # and the export genuinely needs those. Pull only them, not builds/.
+        run: |
+          git lfs pull --include="assets/**" --exclude=""
+
+      - name: Install Godot ${{ env.GODOT_VERSION }} and the export templates
+        run: |
+          set -euxo pipefail
+          base="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+
+          curl -fsSL -o godot.zip "${base}/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q godot.zip
+          sudo mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" /usr/local/bin/godot
+          sudo chmod +x /usr/local/bin/godot
+          godot --version
+
+          curl -fsSL -o templates.tpz "${base}/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          unzip -q templates.tpz
+          template_dir="${HOME}/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "${template_dir}"
+          mv templates/* "${template_dir}/"
+          ls "${template_dir}" | head
+
+      - name: Import resources
+        # The first import on a clean checkout always reports missing UIDs for
+        # files it has not reached yet; the second pass is the one that counts.
+        run: |
+          godot --headless --path . --import || true
+          godot --headless --path . --import
+
+      - name: Export ${{ matrix.name }}
+        run: |
+          set -euxo pipefail
+          mkdir -p "builds/${{ matrix.name }}"
+          godot --headless --path . \
+            --export-release "${{ matrix.preset }}" \
+            "builds/${{ matrix.name }}/${{ matrix.out }}"
+
+      - name: Package ${{ matrix.name }}
+        run: |
+          set -euxo pipefail
+          if [ "${{ matrix.repack }}" = "true" ]; then
+            # Zip the export folder so the archive has no leading directory.
+            ( cd "builds/${{ matrix.name }}" && zip -r -9 -q \
+              "../${PROJECT_NAME}-${{ matrix.name }}.zip" . )
+          else
+            # Godot already writes macOS as a .zip - do not nest it in another.
+            mv "builds/${{ matrix.name }}/${{ matrix.out }}" \
+               "builds/${PROJECT_NAME}-${{ matrix.name }}.zip"
+          fi
+          ls -lh "builds/${PROJECT_NAME}-${{ matrix.name }}.zip"
+
+      - name: Upload ${{ matrix.name }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: builds/${{ env.PROJECT_NAME }}-${{ matrix.name }}.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: Publish release
+    needs: export
+    runs-on: ubuntu-latest
+    # A manual run builds and uploads artifacts but publishes nothing - only a
+    # tag makes a release, so there is always something to name it after.
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Collect every export
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: List what is going out
+        run: ls -lhR dist
+
+      - name: Publish
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/**/*.zip
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          body: |
+            **ForReals** - Brackeys Game Jam 2026.2, *Trust No One*.
+
+            | Download | Platform |
+            | --- | --- |
+            | `ForReals-windows.zip` | Windows x86_64 |
+            | `ForReals-linux.zip` | Linux x86_64 |
+            | `ForReals-macos.zip` | macOS universal (unsigned - see below) |
+            | `ForReals-web.zip` | browser build, for itch.io or any static host |
+
+            The macOS build is ad-hoc signed, not notarised. Gatekeeper will
+            refuse it on first launch: right-click the app and choose **Open**,
+            or run `xattr -dr com.apple.quarantine ForReals.app`.

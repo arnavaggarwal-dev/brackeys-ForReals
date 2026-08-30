@@ -1,0 +1,47 @@
+[gd_scene load_steps=5 format=3 uid="uid://b8nqoegily1bk"]
+
+[ext_resource type="Script" path="res://scripts/nuke.gd" id="1_nuke"]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_1"]
+sky_top_color = Color(0.07, 0.09, 0.18, 1)
+sky_horizon_color = Color(0.42, 0.33, 0.27, 1)
+ground_horizon_color = Color(0.42, 0.33, 0.27, 1)
+ground_bottom_color = Color(0.05, 0.05, 0.07, 1)
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("SkyMaterial_1")
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 2
+sky = SubResource("Sky_1")
+ambient_light_source = 3
+ambient_light_sky_contribution = 0.4
+ambient_light_color = Color(0.55, 0.5, 0.55, 1)
+ambient_light_energy = 1.4
+tonemap_mode = 3
+glow_enabled = true
+glow_intensity = 1.1
+glow_bloom = 0.25
+
+[node name="Nuke" type="Node3D"]
+script = ExtResource("1_nuke")
+
+[node name="World" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="Camera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 27)
+fov = 65.0
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.643, -0.766, 0, 0.766, 0.643, 0, 12, 0)
+light_energy = 2.6
+
+[node name="Fill" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 4, 12)
+light_color = Color(0.6, 0.72, 1, 1)
+light_energy = 0.8
+omni_range = 40.0
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -7, 0)
