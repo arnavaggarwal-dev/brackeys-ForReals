@@ -4,7 +4,7 @@ cd /d "%~dp0"
 
 set "REMOTE_URL=https://github.com/arnavaggarwal-dev/brackeys-ForReals.git"
 set "BRANCH=main"
-set "ITCH_TARGET=CHANGEME/for-reals"
+set "ITCH_TARGET=lazilydev/forreals"
 set "BUTLER=%USERPROFILE%\tools\butler\butler.exe"
 
 set "MESSAGE=%~1"
@@ -91,12 +91,6 @@ if /i not "%ITCH%"=="itch" goto :done
 
 echo.
 echo [*] Uploading builds to itch.io...
-
-if "%ITCH_TARGET%"=="CHANGEME/for-reals" (
-    echo [X] Edit this script and set ITCH_TARGET to your itch.io user/game slug.
-    echo     The slug is the last part of the page URL, not the display title.
-    goto :fail
-)
 
 if not exist "%BUTLER%" (
     echo [X] butler not found at %BUTLER%

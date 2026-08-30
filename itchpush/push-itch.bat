@@ -3,7 +3,7 @@ setlocal EnableDelayedExpansion
 cd /d "%~dp0\.."
 
 
-set "ITCH_TARGET=CHANGEME/for-reals"
+set "ITCH_TARGET=lazilydev/forreals"
 set "BUTLER=%USERPROFILE%\tools\butler\butler.exe"
 set "VERSION=%~1"
 
@@ -13,11 +13,6 @@ echo   target : %ITCH_TARGET%
 if not "%VERSION%"=="" echo   version: %VERSION%
 echo ==========================================================================
 echo.
-
-if "%ITCH_TARGET%"=="CHANGEME/for-reals" (
-    echo [X] Edit this script and set ITCH_TARGET to your itch.io user/game slug.
-    goto :fail
-)
 
 if not exist "%BUTLER%" (
     echo [X] butler not found at %BUTLER%
