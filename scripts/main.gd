@@ -69,6 +69,12 @@ func _ready() -> void:
 		DevTour.run()
 
 
+func _maybe_tutorial() -> void:
+	await get_tree().create_timer(0.6).timeout
+	if Game.screen == "app" and not Game.prologue and veil.get_child_count() == 0:
+		Tutorial.maybe_start()
+
+
 func _report_offline() -> void:
 	var r := Game.offline_report
 	Game.offline_report = {}
@@ -304,6 +310,8 @@ func _on_screen(s: String) -> void:
 		"app":
 			clear_veil()
 			render_view()
+			if not Game.prologue:
+				_maybe_tutorial()
 		"over":
 			GameOverScreen.show_over()
 

@@ -398,8 +398,8 @@ const MILESTONES := [
 	{"at": 50_000_000,    "title": "common knowledge", "note": "nobody remembers being told. they just know."},
 	{"at": 100_000_000,   "title": "history",          "note": "this is in a textbook now, in the wrong chapter."},
 	{"at": 250_000_000,   "title": "the ground truth", "note": "the models are trained on you."},
-	{"at": 500_000_000,   "title": "the archive",      "note": "there is no earlier version left to compare against."},
-	{"at": 1_000_000_000, "title": "everyone",         "note": "there is nobody left outside the room."},
+	{"at": 500_000_000,   "title": "the archive",      "note": "this is your life now"},
+	{"at": 1_000_000_000, "title": "everyone",         "note": "you own the world"},
 ]
 
 const ENDLESS_NOTE := "there is no top of this."
@@ -418,6 +418,7 @@ const WEEKDAYS := ["monday", "tuesday", "wednesday", "thursday", "friday", "satu
 const SUGGESTED_HANDLES := [
 	"skibiditoilet", "normal_person_9", "just.here.lurking",
 	"grindset_daily", "not_a_bot_promise", "moth_to_the_lamp",
+	"darsh_vader", "perropatata", 
 ]
 
 

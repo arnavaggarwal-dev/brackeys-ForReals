@@ -23,8 +23,14 @@ Whatever you post is the third. The account is gone in one move:
 > were talking to an empty room, and then the room was closed.
 
 Then you start again at two followers, and spend the run building the machine that
-just deleted you. By the time you have your own account you have already seen
-suspicion, throttled reach and a strike land, and nobody had to explain any of them.
+just deleted you.
+
+The ending names the thing that killed you. It shows the bar the account was actually
+carrying - 74 of 80, which you were never shown - and spells out the four rules: claims
+nobody can check fill it, it cools a little each day and faster the bigger you are,
+filling it costs a strike and 30% of your followers, and three strikes ends the account.
+You have just watched all four happen, so the explanation lands on something you already
+felt rather than a tooltip you skipped.
 
 ## The loop
 
@@ -51,6 +57,10 @@ Wins fire at **5,000**, **1,000,000** and **1,000,000,000** followers. Each is a
 not a wall — take the ending and **Keep the account** to carry on with clock, heat and
 assets intact.
 
+On first sign-in a six-step tutorial points at the real controls - the post button, your
+profile, the feed, the trends panel, the suspicion bar and the taskbar. Skippable, and
+replayable any time from **Start -> Tutorial**.
+
 ## Running it
 
 Open with **Godot 4.7**, press F5. Starts fullscreen; **F11** or **Alt+Enter** to
@@ -67,6 +77,12 @@ by it.
 | `--balance` | simulates competent play, reports days-to-win and ban rate |
 | `--shots` | writes the five store screenshots to `itchpush/screenshots` |
 | `--nuke` | skips straight to the bomb |
+
+The Start menu also carries sound, a font toggle, the tutorial, nuking the save, and
+quit. It opens over the sign-in screen too, so you can quit before ever making an
+account. The font toggle swaps the whole interface between **W95FA** and **Pixelify
+Sans**; both are already bundled and OFL, which is why it is those two and not Comic
+Sans (proprietary, cannot be redistributed) or Minecraftia (unclear licence).
 
 ## Numbers
 
@@ -160,6 +176,8 @@ sync with state.
 | `scripts/game.gd` | the day clock, reach maths, suspicion, strikes, feed. Emits signals, knows nothing about UI |
 | `scripts/trends.gd` | the Wikimedia fetch and normalised topic weights |
 | `scripts/style.gd` | palette, fonts, and the factories every view builds from |
+| `scripts/prefs.gd` | `user://forreals.cfg` - sound, font and tutorial-seen, kept out of the save |
+| `scripts/screens/tutorial.gd` | the six-step overlay, and `widgets/highlight.gd` draws its ring |
 | `scripts/bevel_box.gd` | the Windows 95 3D border as a `StyleBox` |
 | `scripts/sfx.gd` | procedural synthesis, no audio files |
 | `scripts/main.gd` | `AppShell` — three columns, toasts, modal host |

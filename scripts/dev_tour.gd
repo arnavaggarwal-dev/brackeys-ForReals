@@ -230,6 +230,7 @@ static func _snap(name: String) -> void:
 
 static func run_shots() -> void:
 	var tree := AppShell.i.get_tree()
+	Prefs.set_v("tutorial_seen", true)
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 	DisplayServer.window_set_size(SHOT_SIZE)
 	await tree.create_timer(0.6).timeout
@@ -260,6 +261,12 @@ static func run_shots() -> void:
 	await tree.create_timer(3.0).timeout
 	Game.view_dirty.emit()
 	await _snap("01-desktop")
+
+	Tutorial.start()
+	await tree.create_timer(0.8).timeout
+	await _snap("06-tutorial")
+	Tutorial.stop()
+	await tree.create_timer(0.4).timeout
 
 	Game.posts_today = 0
 	Game.deal_hand()
@@ -502,6 +509,60 @@ static func _check_menu_at_signin() -> void:
 		push_error("TOUR: the Start menu would not close")
 	if find_button(AppShell.i, "community guidelines") == null:
 		push_error("TOUR: closing the Start menu took sign-in with it")
+
+
+static func _check_tutorial() -> void:
+	var tree := AppShell.i.get_tree()
+	Prefs.set_v("tutorial_seen", false)
+	if Tutorial.seen():
+		push_error("TOUR: the tutorial thinks it has been seen already")
+	Tutorial.start()
+	await tree.create_timer(0.6).timeout
+	if not Tutorial.is_open():
+		push_error("TOUR: the tutorial would not open")
+		return
+	if find_button(AppShell.i, "Skip") == null:
+		push_error("TOUR: the tutorial cannot be skipped")
+		return
+
+	var steps := Tutorial.STEPS.size()
+	for i in steps - 1:
+		var nxt := find_button(AppShell.i, "Next")
+		if nxt == null:
+			nxt = find_button(AppShell.i, "Got it")
+		if nxt == null:
+			push_error("TOUR: the tutorial stalled on step %d of %d" % [i + 1, steps])
+			return
+		await click(nxt)
+		await tree.create_timer(0.35).timeout
+
+	var last := find_button(AppShell.i, "Got it")
+	if last == null:
+		push_error("TOUR: the last tutorial step has no way out")
+		return
+	await click(last)
+	await tree.create_timer(0.4).timeout
+	if Tutorial.is_open():
+		push_error("TOUR: the tutorial would not close")
+		return
+	if not Tutorial.seen():
+		push_error("TOUR: finishing the tutorial did not remember it")
+		return
+	print("TOUR: the tutorial walks %d steps and remembers it is done" % steps)
+
+
+static func _check_fonts() -> void:
+	var was := Style.face
+	var nxt := Style.next_face()
+	if nxt == was:
+		push_error("TOUR: there is only one font to switch between")
+		return
+	Style.set_face(nxt)
+	if Style.face != nxt or Style.ui_r == null:
+		push_error("TOUR: switching to %s did not take" % nxt)
+	else:
+		print("TOUR: font switches to '%s'" % Style.face_name())
+	Style.set_face(was)
 
 
 static func _check_save() -> void:
@@ -1023,6 +1084,7 @@ static func _check_trends() -> void:
 
 static func run() -> void:
 	var tree := AppShell.i.get_tree()
+	Prefs.set_v("tutorial_seen", true)
 
 	await tree.create_timer(1.8).timeout
 	_check_trends()
@@ -1299,6 +1361,8 @@ static func run() -> void:
 	await tree.create_timer(1.0).timeout
 	_check_save()
 	await _check_menu_at_signin()
+	await _check_tutorial()
+	_check_fonts()
 
 	Composer.open()
 	await tree.create_timer(1.6).timeout

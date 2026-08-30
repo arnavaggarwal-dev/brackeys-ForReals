@@ -59,6 +59,32 @@ static func show_menu() -> void:
 	))
 	items.add_child(Style.hline())
 	items.add_child(_item(
+		Icon.Kind.PERSON,
+		"Font: %s" % Style.face_name(),
+		"the whole interface, in a different face",
+		func() -> void:
+			var nxt := Style.next_face()
+			Style.set_face(nxt)
+			Prefs.set_v("face", nxt)
+			close()
+			Game.nav_dirty.emit()
+			Game.view_dirty.emit()
+			show_menu()
+	))
+	items.add_child(Style.hline())
+	items.add_child(_item(
+		Icon.Kind.CHECK, "Tutorial", "the arrows again, from the top",
+		func() -> void:
+			close()
+			if Game.screen == "app":
+				Tutorial.start()
+			else:
+				Game.toast_requested.emit(
+					"Not yet", "sign in first and it will run itself", true
+				)
+	))
+	items.add_child(Style.hline())
+	items.add_child(_item(
 		Icon.Kind.WARNING, "Nuke account...", "delete the save, permanently",
 		func() -> void:
 			close()

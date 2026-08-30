@@ -37,26 +37,13 @@ func _ready() -> void:
 
 func set_muted(v: bool) -> void:
 	muted = v
-	var f := FileAccess.open(PREFS, FileAccess.WRITE)
-	if f == null:
-		return
-	f.store_string(JSON.stringify({"muted": muted}))
-	f.close()
+	Prefs.set_v("muted", muted)
 	if not muted:
 		tick()
 
 
 func _load_prefs() -> void:
-	if not FileAccess.file_exists(PREFS):
-		return
-	var f := FileAccess.open(PREFS, FileAccess.READ)
-	if f == null:
-		return
-	var text := f.get_as_text()
-	f.close()
-	var d: Variant = JSON.parse_string(text)
-	if typeof(d) == TYPE_DICTIONARY:
-		muted = bool(d.get("muted", false))
+	muted = bool(Prefs.get_v("muted", false))
 
 
 func _buzz_voice(t: float, u: float) -> float:

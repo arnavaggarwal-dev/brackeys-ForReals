@@ -46,13 +46,37 @@ var tiny_b: FontFile
 var _tracked: Dictionary = {}
 
 
+const FACES := {
+	"w95fa": {"path": "res://assets/fonts/W95FA.otf", "name": "Windows 95"},
+	"pixel": {"path": "res://assets/fonts/PixelifySans-Regular.ttf", "name": "Blocky"},
+}
+
+var face := "w95fa"
+
+
 func _ready() -> void:
-	ui_base = load("res://assets/fonts/W95FA.otf")
 	tiny_r = load("res://assets/fonts/Silkscreen-Regular.ttf")
 	tiny_b = load("res://assets/fonts/Silkscreen-Bold.ttf")
-	for f: FontFile in [ui_base, tiny_r, tiny_b]:
-		_crisp(f)
+	_crisp(tiny_r)
+	_crisp(tiny_b)
+	set_face(String(Prefs.get_v("face", "w95fa")))
 
+
+func face_name() -> String:
+	return String(FACES[face]["name"])
+
+
+func next_face() -> String:
+	var keys := FACES.keys()
+	return String(keys[(keys.find(face) + 1) % keys.size()])
+
+
+func set_face(id: String) -> void:
+	if not FACES.has(id):
+		id = "w95fa"
+	face = id
+	ui_base = load(String(FACES[id]["path"]))
+	_crisp(ui_base)
 	ui_r = ui_base
 	ui_m = _weight(ui_base, 0.35)
 	ui_b = _weight(ui_base, 0.85)

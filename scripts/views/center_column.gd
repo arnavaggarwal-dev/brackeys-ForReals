@@ -116,9 +116,9 @@ static func _nothing_yet() -> Control:
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	col.add_child(Style.label("Nothing here yet.", Style.ui_b, 17, Style.INK))
 	col.add_child(Style.body(
-		"You get one post a day, and today runs %s. Following somebody costs you "
+		"You get one post a day, and today runs %s. Also u can follow ppl"
 			% Game.duration(Game.day_length())
-		+ "whatever you lose reading their posts, today and only today.",
+		+ "U will involuntarily be forced to scroll thru their posts though. That is how social media works.",
 		Style.ui_r, 14, Style.INK_SOFT, 5
 	))
 	row.add_child(col)
