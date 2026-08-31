@@ -65,7 +65,8 @@ static func _empty_feed() -> Control:
 	var col := Style.vbox(6)
 	col.add_child(Style.label("You do not follow anybody.", Style.ui_b, 15, Style.INK))
 	col.add_child(Style.body(
-		"The feed is empty until you follow somebody. Suggestions are on the right - "
+		"The feed is empty until you follow somebody. Suggestions are %s - "
+			% ("under Today" if AppShell.narrow else "on the right")
 		+ "but every one of them costs you part of the day you were going to post in.",
 		Style.ui_r, 13, Style.INK_SOFT, 4
 	))

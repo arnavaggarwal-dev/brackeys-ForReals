@@ -39,7 +39,7 @@ window/size/window_height_override=936
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 window/stretch/scale=0.85
-window/handheld/orientation=4
+window/handheld/orientation=6
 
 [input_devices]
 

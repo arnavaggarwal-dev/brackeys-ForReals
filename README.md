@@ -281,13 +281,40 @@ which still installs but will not install *over* an earlier release. To build lo
 inject the same three keys by hand and take them out again afterwards - do not commit an
 absolute keystore path.
 
-The interface is locked to landscape (`window/handheld/orientation`), sits inside the
-display safe area, and is scaled up a notch on a handheld because a finger is blunter
-than a mouse pointer. Rows scroll by dragging: `DragScroll` tracks the finger in
-`_input`, ahead of the GUI, because every row is a `Tappable` that swallows the press
-before a `ScrollContainer` could ever see it. A drag past ten pixels cancels the press,
-so scrolling a shelf never buys anything. The back gesture steps out of the open panel
-and falls through to the Start menu; it never ends the run.
+#### The handheld shell
+
+The interface is scaled against the **real screen, not the pixel count**: about 5.9
+units per millimetre of glass on a phone, 5.0 on a tablet, worked back into
+`content_scale_factor` in `AppShell._fit_handheld`. Any fixed unit count fails - the
+desktop's density puts body text at 1.15mm on a phone, and a count that reads well in
+landscape is unreadable turned upright.
+
+Three columns need 340 + 320 plus a feed between them, which no phone has in either
+orientation, so below `NARROW_BELOW` the shell shows **one window at a time** and the
+taskbar grows a button per window - Me, Feed, Today - which is what a taskbar was always
+for. Both orientations are allowed and rotating re-scales; it only rebuilds the shell
+when the column count actually changes, which is to say on a tablet.
+
+Two things bite on a real device, both fixed here and both worth knowing:
+
+  - **The taskbar must not set the shell's width.** Its row wanted 411 units against a
+    385 unit portrait screen, and being a `PanelContainer` it propagated that minimum
+    all the way up, dragging every window off the right edge. The row now sits in a
+    plain `Control`, which reports no minimum of its own.
+
+  - **`get_display_safe_area()` answers late.** Just after a rotation Android still
+    describes the orientation the phone has left, so a landscape rectangle arrives
+    against a portrait window and the right inset comes out *positive*. Anything
+    claiming more than a quarter of the window is not believed.
+
+The safe area insets the desktop along with the shell, so the band beside a camera
+cutout falls through to a black underlay and reads as bezel rather than a teal stripe.
+
+Rows scroll by dragging: `DragScroll` tracks the finger in `_input`, ahead of the GUI,
+because every row is a `Tappable` that swallows the press before a `ScrollContainer`
+could ever see it. A drag past ten pixels cancels the press, so scrolling a shelf never
+buys anything. The back gesture steps out of the open panel and falls through to the
+Start menu; it never ends the run.
 
 `res://assets/android/` holds the launcher icons, generated from `icon.svg` by
 `godot --headless --path . --script res://tools/make_android_icons.gd`.
