@@ -138,9 +138,9 @@ break a rule the rest of the game obeys:
 ### Assets and people
 
 Assets appear at 300 followers, hires at 750. Prices compound 15% per purchase (the
-scheduler 4×, because the day does not get longer). Everything you own adds heat every
-second, and that is the whole late game - a burner costs over four thousand times more
-heat per follower than a media partner.
+scheduler 90%, because one copy buys a whole extra post). Everything you own adds heat
+every second, and that is the whole late game - a burner costs over four thousand times
+more heat per follower than a media partner.
 
 | Asset | From | Produces | Susp/sec | | Agent | From | Does | Susp/sec |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -155,6 +155,12 @@ heat per follower than a media partner.
 
 Three levers keep you under the cooling line: pause anything (paused items produce
 nothing and cost no heat), go quiet for a day, or buy `publicly apologised for`.
+
+Nothing on the shelf is one to a customer. Every asset and every agent can be bought
+again as many times as the payout will stand, the price rising 15% a copy - the
+Scheduling suite included, which climbs at 90% a copy because each one buys a whole
+extra post rather than a trickle of followers. The speech fragments in the store are
+the only single purchases, because owning a line twice would mean nothing.
 
 ### While you are away
 

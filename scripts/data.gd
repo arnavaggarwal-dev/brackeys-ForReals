@@ -59,8 +59,8 @@ const ASSETS := [
 	},
 	{
 		"id": "scheduler", "name": "Scheduling suite", "cost": 60.0,
-		"fps": 0.0, "susp": 0.250, "posts": 1, "growth": 4.0,
-		"note": "one more post a day. the day does not get any longer",
+		"fps": 0.0, "susp": 0.250, "posts": 1, "growth": 1.9,
+		"note": "one more post a day. buy it again for another, and again",
 	},
 	{
 		"id": "pod", "name": "Engagement pod", "cost": 90.0,

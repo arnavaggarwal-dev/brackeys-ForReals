@@ -191,6 +191,26 @@ static func _best_draft() -> void:
 	Game.set_fragment("end", pick[2])
 
 
+# Followers bought per point of suspicion, so a shelf item that sells reach per
+# second and one that sells a whole extra post a day can be compared like for like.
+static func _asset_efficiency(a: Dictionary) -> float:
+	var susp := float(a["susp"])
+	var fps := float(a.get("fps", 0.0))
+	var posts := int(a.get("posts", 0))
+	var gained := fps
+	var heat := susp
+	if posts > 0:
+		var mean_roll: float = (Data.FOLLOWER_ROLL_MIN + Data.FOLLOWER_ROLL_MAX) * 0.5
+		var reach := float(Game.projected_reach())
+		gained += (
+			reach * mean_roll * Data.FOLLOWER_SHARE * float(posts) / Data.DAY_BASE_SECONDS
+		)
+		heat += Game.projected_suspicion() * float(posts) / Data.DAY_BASE_SECONDS
+	if gained <= 0.0:
+		return 0.0
+	return gained / maxf(0.001, heat)
+
+
 static func _buy_greedy() -> void:
 	for pass_i in 8:
 		var best: Dictionary = {}
@@ -199,10 +219,7 @@ static func _buy_greedy() -> void:
 			for a: Dictionary in Data.ASSETS:
 				if not Game.can_afford_asset(a) or float(a["susp"]) <= 0.0:
 					continue
-				var fps := float(a.get("fps", 0.0))
-				if fps <= 0.0:
-					continue
-				var eff := fps / float(a["susp"])
+				var eff := _asset_efficiency(a)
 				if eff > best_eff:
 					best_eff = eff
 					best = a
