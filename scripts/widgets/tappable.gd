@@ -10,6 +10,7 @@ enum Look {
 	ACTION,
 }
 
+# A finger that travels this far was scrolling the list, not pressing the row.
 const DRAG_SLOP := 10.0
 
 var look: Look = Look.BUTTON
@@ -116,6 +117,8 @@ func _apply(down: bool) -> void:
 	_content.add_theme_constant_override("margin_bottom", b - nudge)
 
 
+# Only the mouse is answered here, emulated or real. The raw touch is deliberately
+# left alone so it reaches the ScrollContainer above and the list still scrolls.
 func _refuse(event: InputEvent) -> void:
 	if not (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT):
 		return
@@ -141,6 +144,9 @@ func _gui_input(event: InputEvent) -> void:
 		_refuse(event)
 		return
 
+	# A finger that lands on a row may only be starting a scroll, so the press is
+	# dropped the moment that finger travels. The touch itself is never accepted;
+	# emulate_mouse_from_touch turns it into the mouse events handled below.
 	if event is InputEventScreenDrag:
 		_drop_if_dragged(event.position)
 		return
@@ -159,6 +165,7 @@ func _gui_input(event: InputEvent) -> void:
 		_pressed_in = false
 		_apply(false)
 		accept_event()
+		# That press turned out to be a finger scrolling the list past this row.
 		if DragScroll.scrolling:
 			return
 		Sfx.tap()

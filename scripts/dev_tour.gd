@@ -111,6 +111,8 @@ static func _simulate(seed_index: int) -> Dictionary:
 		earned += reach * frac
 		heat += susp * frac
 
+		# The people you hire react on their own all day. That reach is theirs and
+		# costs no suspicion, which is the whole reason to hire any of them.
 		earned += reach * _hired_reactions_per_day()
 
 		Game.followers += int(earned * mean_roll * Data.FOLLOWER_SHARE)
@@ -194,6 +196,8 @@ static func _best_draft() -> void:
 	Game.set_fragment("end", pick[2])
 
 
+# Followers bought per point of suspicion, so a shelf item that sells reach per
+# second and one that sells a whole extra post a day can be compared like for like.
 static func _asset_efficiency(a: Dictionary) -> float:
 	var susp := float(a["susp"])
 	var fps := float(a.get("fps", 0.0))
@@ -223,6 +227,8 @@ static func _hired_reactions_per_day() -> float:
 	return total
 
 
+# Hiring costs no suspicion at all now, so the only thing holding it back is the
+# price, and a competent player hires whoever earns most per pound.
 static func _hire_greedy() -> void:
 	if not Game.agents_open():
 		return

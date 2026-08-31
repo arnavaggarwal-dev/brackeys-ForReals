@@ -1,6 +1,16 @@
+# Finger scrolling for a ScrollContainer.
+#
+# Godot's own touch handling inside ScrollContainer never gets a look in here,
+# because every row is a Tappable with MOUSE_FILTER_STOP and it swallows the press
+# before the container sees it. So the drag is tracked in _input, which runs ahead
+# of the whole GUI, and turned into a scroll offset directly.
+#
+# While a drag is in progress `scrolling` is true, and Tappable reads it to throw
+# away the release, so dragging a list never buys anything.
 class_name DragScroll
 extends Node
 
+# How far a finger may travel before it stops counting as a press.
 const SLOP := 10.0
 
 static var scrolling := false
@@ -28,6 +38,8 @@ func _input(event: InputEvent) -> void:
 		_move(event.position)
 		return
 
+	# A real mouse is left alone. Only a touchscreen driving an emulated pointer is
+	# followed, so click and drag on the desktop still behaves like a click.
 	if not DisplayServer.is_touchscreen_available():
 		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:

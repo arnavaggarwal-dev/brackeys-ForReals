@@ -127,6 +127,8 @@ static func _find_text(root: Node, text: String) -> Control:
 
 static func _render() -> void:
 	var step: Dictionary = STEPS[_step]
+	# On a phone only one window is up, so the one this step is about has to be
+	# brought forward, and the layout given a frame to settle, before it is ringed.
 	if AppShell.narrow:
 		AppShell.i.show_pane_for(String(step.get("where", "")))
 		await AppShell.i.get_tree().process_frame

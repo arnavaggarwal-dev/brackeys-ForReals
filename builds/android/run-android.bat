@@ -1,5 +1,15 @@
 @echo off
 setlocal enabledelayedexpansion
+rem ---------------------------------------------------------------------------
+rem  Boots the Android emulator, installs ForReals.apk next to this file, and
+rem  starts it.
+rem
+rem    run-android.bat                 first AVD found, phone geometry
+rem    run-android.bat Pixel_6a        that AVD
+rem    run-android.bat Pixel_6a tablet 2560x1600 at 276dpi instead
+rem
+rem  Close the emulator window when you are done, or run: adb emu kill
+rem ---------------------------------------------------------------------------
 
 set "APK=%~dp0ForReals.apk"
 set "PKG=com.forreals.game"
@@ -52,6 +62,8 @@ if defined RUNNING (
 	echo A device is already attached, using that one.
 ) else (
 	echo Booting %AVD% ...
+	rem -gpu host, because software Vulkan crashes this emulator outright, and
+	rem 4G, because the stock 2G lets the low memory killer take the game down.
 	start "Android emulator - %AVD%" "%EMULATOR%" -avd %AVD% ^
 		-memory 4096 -no-snapshot -no-boot-anim -no-audio -gpu host
 )

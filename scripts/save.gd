@@ -28,6 +28,8 @@ func _notification(what: int) -> void:
 		or what == NOTIFICATION_APPLICATION_FOCUS_OUT
 		or what == NOTIFICATION_APPLICATION_PAUSED
 	):
+		# The Android back gesture steps out of a panel, it does not end the run, so
+		# the save is written and the quitting is left to AppShell and the Start menu.
 		write()
 
 
@@ -146,6 +148,9 @@ func _snapshot() -> Dictionary:
 	}
 
 
+# Only an account the game can find again is collapsed to its handle. The prologue
+# writes its own accounts, which are in no list, so those travel whole or they come
+# back from the save with no byline at all.
 func _strip(post: Dictionary) -> Dictionary:
 	var out := post.duplicate(true)
 	if out.has("acc") and not Game.account_by_handle(String(out["acc"]["h"])).is_empty():
@@ -160,6 +165,8 @@ func _rehydrate(post: Dictionary) -> Dictionary:
 		var handle := String(out["acc_h"])
 		var acc := Game.account_by_handle(handle)
 		if acc.is_empty():
+			# Written by an older build, or by somebody who has since gone. The post
+			# still has to draw, so it gets a plain stand-in.
 			acc = {"h": handle, "n": handle, "topic": "politics", "followers": 0, "at": 0}
 		out["acc"] = acc
 		out.erase("acc_h")

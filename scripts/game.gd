@@ -404,6 +404,8 @@ func _tick_agents(delta: float) -> void:
 
 
 func offline_supported() -> bool:
+	# Anywhere user:// survives the app being closed and the clock is the system's.
+	# The web build is out, because a tab's storage and clock are both negotiable.
 	var os_name := OS.get_name()
 	return os_name == "Windows" or os_name == "Linux" or os_name == "Android"
 
@@ -819,6 +821,8 @@ func comment_reach() -> int:
 	return int(round(projected_reach() * Data.COMMENT_IMPACT))
 
 
+# `charged` is false for the people you hire. They pick what to react to and when,
+# and being made to answer for a choice you were never offered is not a game.
 func _react(kind: String, impact: float, charged: bool = true) -> Dictionary:
 	var reach := int(round(projected_reach() * impact))
 	if projected_reach() > 0:

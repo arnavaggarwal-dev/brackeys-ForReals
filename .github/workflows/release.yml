@@ -73,6 +73,10 @@ jobs:
         if: matrix.name == 'android'
         uses: android-actions/setup-android@v3
 
+      # Godot signs the APK itself, reading the keystore out of the preset. A
+      # repository secret is used when one is set, so that successive releases
+      # install over each other; without it a throwaway key is made here, which
+      # still produces an APK a phone will accept.
       - name: Provide an Android signing key
         if: matrix.name == 'android'
         env:
@@ -117,6 +121,10 @@ jobs:
           print("Android preset pointed at", store)
           PYCFG
 
+      # Godot refuses to export iOS at all without a team ID, even though this
+      # build is never signed. A real one is used when the secret is set, so the
+      # generated project is ready to sign; otherwise a placeholder gets it past
+      # the check and xcodebuild ignores it under CODE_SIGNING_ALLOWED=NO.
       - name: Set the Apple team ID
         if: matrix.name == 'ios'
         env:
@@ -167,6 +175,7 @@ jobs:
 
           curl -fsSL -o godot.zip "${base}/Godot_v${GODOT_VERSION}-stable_macos.universal.zip"
           unzip -q godot.zip
+          # curl sets no quarantine flag, but a runner image may still carry one.
           xattr -dr com.apple.quarantine Godot.app || true
           sudo ln -sf "${PWD}/Godot.app/Contents/MacOS/Godot" /usr/local/bin/godot
           godot --version
@@ -192,6 +201,11 @@ jobs:
             --export-release "${{ matrix.preset }}" \
             "builds/${{ matrix.name }}/${{ matrix.out }}"
 
+      # Godot writes an Xcode project rather than a finished app, and turning that
+      # into an .ipa is xcodebuild's job. Signing is switched off: without an Apple
+      # Developer account there is no certificate to sign with, and an unsigned
+      # .ipa is still installable through AltStore, Sideloadly or a paid account
+      # re-signing it. It cannot go to the App Store as it stands.
       - name: Build the Xcode project into an unsigned ipa
         if: matrix.name == 'ios'
         run: |
@@ -206,6 +220,7 @@ jobs:
           project="$(basename "${project}")"
           xcodebuild -project "${project}" -list
 
+          # -target rather than -scheme: Godot's project carries no shared scheme.
           target="$(xcodebuild -project "${project}" -list |
             awk '/Targets:/{grab=1; next} /^$/{grab=0} grab{print $1; exit}')"
           echo "building target ${target}"

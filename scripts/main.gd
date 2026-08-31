@@ -9,17 +9,29 @@ const EDGE := 8.0
 const TASKBAR_H := Taskbar.HEIGHT
 const TOAST_SCALE := Toast.SCALE
 
+# A handheld interface is measured out against the real screen, not the pixel
+# count. A phone is about 142mm across in landscape and 71mm in portrait, so any
+# fixed unit count is unreadable in one of the two. These are interface units per
+# millimetre of actual glass, which holds in both, and on any size of phone.
+#
+# At 5.9, body text at 13 units lands a shade over 2mm tall. A tablet is held
+# further away and has room to spare, so it runs denser and keeps three columns.
 const PHONE_UNITS_PER_MM := 5.9
 const TABLET_UNITS_PER_MM := 5.0
 
+# Used only when the platform will not say how big or how dense the screen is.
 const FALLBACK_WIDTH := 900.0
 
+# The largest share of the window a believable notch or gesture bar can take up.
 const SAFE_AREA_SANITY := 0.25
 
 const TABLET_INCHES := 7.5
 
+# The three columns want 340 + 320 plus a readable feed between them, which no
+# phone has room for. Below this the shell shows one window at a time instead.
 const NARROW_BELOW := 1080.0
 
+# Which window a narrow shell is showing. Ignored when all three are up.
 static var narrow := false
 
 var pane := "profile"
@@ -141,6 +153,8 @@ static func is_handheld() -> bool:
 	return OS.has_feature("mobile") or OS.has_feature("android") or OS.has_feature("ios")
 
 
+# Physical size of the whole screen on the diagonal. Zero when the platform will
+# not say, which is read as a phone, that being the worse of the two to get wrong.
 static func screen_inches() -> float:
 	var dpi := DisplayServer.screen_get_dpi()
 	var px := Vector2(DisplayServer.screen_get_size())
@@ -149,6 +163,8 @@ static func screen_inches() -> float:
 	return px.length() / float(dpi)
 
 
+# How many interface units to lay across the window, so that a millimetre of real
+# screen always holds about the same amount of text whichever way up it is held.
 func _wanted_width(win: Vector2) -> float:
 	var dpi := DisplayServer.screen_get_dpi()
 	if dpi <= 0:
@@ -164,12 +180,16 @@ func _fit_handheld() -> void:
 	var win := Vector2(DisplayServer.window_get_size())
 	if win.x <= 0.0 or win.y <= 0.0:
 		return
+	# Godot fits the 1280x720 base into the window first; the factor is applied on
+	# top of that, so it is worked back out of the width the interface wants.
 	var base := minf(win.x / 1280.0, win.y / 720.0)
 	var want := _wanted_width(win)
 	get_tree().root.content_scale_factor = win.x / (want * base)
 	narrow = want < NARROW_BELOW
 
 
+# Turning the phone over changes how much room there is, and on a tablet it also
+# decides whether three columns still fit, which needs the shell built again.
 func _relayout() -> void:
 	if _relaying:
 		return
@@ -190,6 +210,12 @@ func _relayout() -> void:
 	_relaying = false
 
 
+# Keeps the three windows clear of a notch, a punch hole, or the gesture bar.
+#
+# Checked every frame rather than on size_changed alone, because the safe area
+# arrives after the rotation does. Asked too early, Android answers for the
+# orientation the phone has just left: a landscape rectangle against a portrait
+# window, which reaches past the right edge and takes the shell with it.
 func _apply_safe_area() -> void:
 	if shell == null or not is_handheld():
 		return
@@ -204,12 +230,16 @@ func _apply_safe_area() -> void:
 	var t := maxf(0.0, float(safe.position.y))
 	var r := maxf(0.0, float(win.x - safe.position.x - safe.size.x))
 	var b := maxf(0.0, float(win.y - safe.position.y - safe.size.y))
+	# No real notch eats a quarter of the screen, so anything claiming to is a
+	# rectangle meant for the other orientation and is left alone until it agrees.
 	if l + r > float(win.x) * SAFE_AREA_SANITY or t + b > float(win.y) * SAFE_AREA_SANITY:
 		return
 
 	_win_applied = win
 	_safe_applied = safe
 	var to_ui := size / Vector2(win)
+	# The desktop is inset with the shell, so the band beside a camera cutout is
+	# left to the black underlay and reads as bezel instead of a teal stripe.
 	for c: Control in [shell, desktop]:
 		c.offset_left = l * to_ui.x
 		c.offset_top = t * to_ui.y
@@ -218,6 +248,7 @@ func _apply_safe_area() -> void:
 
 
 func _build() -> void:
+	# A fresh shell has no inset yet, whatever was last applied to the old one.
 	_win_applied = Vector2i.ZERO
 	_safe_applied = Rect2i()
 
@@ -318,6 +349,8 @@ func _build() -> void:
 	add_child(menu_layer)
 
 
+# On a phone the three windows are stacked on top of each other and the taskbar
+# picks between them, which is what a taskbar was always for.
 func show_pane(id: String) -> void:
 	if not narrow:
 		return
@@ -329,6 +362,8 @@ func show_pane(id: String) -> void:
 		taskbar.mark_pane(id)
 
 
+# The tutorial and anything else that talks about one of the three columns needs
+# that column to actually be the one on screen.
 func show_pane_for(where: String) -> void:
 	match where:
 		"left":
@@ -356,6 +391,7 @@ func _scroller() -> ScrollContainer:
 
 
 func _body_of(s: ScrollContainer) -> VBoxContainer:
+	# The scroller also carries a DragScroll, so the padding is found by type.
 	for child in s.get_children():
 		if child is MarginContainer:
 			return child.get_child(0) as VBoxContainer
@@ -435,6 +471,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
+# Escape on the desktop and the Android back gesture both mean "out of this one
+# thing". Neither may throw the run away, which is why quit_on_go_back is off.
 func _go_back() -> bool:
 	if NukeScreen.running():
 		return false

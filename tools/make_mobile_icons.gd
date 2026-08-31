@@ -1,13 +1,20 @@
+# Renders the launcher icons Android and iOS ask for out of icon.svg, so the
+# 32x32 original stays the single source of truth.
+#
+#   godot --headless --path . --script res://tools/make_mobile_icons.gd
 extends SceneTree
 
 const SRC := "res://icon.svg"
 const ANDROID_OUT := "res://assets/android"
 const IOS_OUT := "res://assets/ios"
 
+# Android crops an adaptive icon hard, so the artwork sits in the middle third.
 const ADAPTIVE := 432
 const ADAPTIVE_ART := 264
 const BACKDROP := Color(0.0, 0.502, 0.502, 1.0)
 
+# iOS draws no background of its own and rejects an icon with an alpha channel,
+# so every one of these is flattened onto the same teal the game boots to.
 const IOS_SIZES := [40, 76, 80, 120, 152, 167, 180, 1024]
 
 
@@ -31,6 +38,7 @@ func _initialize() -> void:
 
 func _square(svg: String, px: int) -> Image:
 	var img := Image.new()
+	# 32 is the source viewBox, so the scale is a whole number and no pixel smears.
 	if img.load_svg_from_string(svg, float(px) / 32.0) != OK:
 		push_error("ICONS: could not rasterise the svg")
 		quit(1)
