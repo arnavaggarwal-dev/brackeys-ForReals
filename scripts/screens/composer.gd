@@ -58,7 +58,7 @@ static func _render() -> void:
 	body.add_child(_deal_row())
 	body.add_child(Style.spacer(14))
 
-	var split := Style.hbox(14)
+	var split: Control = Style.vbox(12) if AppShell.narrow else Style.hbox(14)
 	split.add_child(Style.group("Verdict", _verdict()))
 	var right := Style.vbox(0)
 	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -109,8 +109,11 @@ static func _sentence_well() -> Control:
 	return well
 
 
+# Three columns abreast need more width than a phone has in either orientation.
+# A PanelContainer is never smaller than what it holds, so left as a row this
+# overrides the dialog's own width clamp and hangs off the side of the screen.
 static func _slots() -> Control:
-	var row := Style.hbox(12)
+	var row: Control = Style.vbox(10) if AppShell.narrow else Style.hbox(12)
 	row.add_child(_slot("start", "Who", Game.draft_start))
 	row.add_child(_slot("middle", "Did what", Game.draft_middle))
 	row.add_child(_slot("end", "To what", Game.draft_end))

@@ -383,7 +383,7 @@ func _scroller() -> ScrollContainer:
 
 	var body := Style.vbox(0)
 	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var pad := Style.margins(body, 10, 10, 10, 12)
+	var pad := Style.margins(body, 10, 10, 18, 12)
 	pad.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	s.add_child(pad)
 	DragScroll.attach(s)
@@ -558,6 +558,12 @@ func restart() -> void:
 func quit_game() -> void:
 	Save.write()
 	get_tree().quit()
+	# iOS ignores quit() outright, and Android can leave the task sitting in the
+	# switcher, so on a handheld the process is ended for real. Apple discourage
+	# killing your own app; that only bites an App Store build, and this one is
+	# sideloaded.
+	if is_handheld():
+		OS.kill(OS.get_process_id())
 
 
 func mount_menu(node: Control) -> void:

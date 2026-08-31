@@ -95,7 +95,13 @@ static func _fit(
 	)
 	frame.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	frame.size = size
-	frame.position = ((vp - size) * 0.5).floor()
+	# A container is never smaller than what it holds, so the width above is a
+	# request, not a promise. Centre on what it will actually be, and never on a
+	# negative offset, or an oversized dialog walks off the left of the screen.
+	var actual := frame.get_combined_minimum_size().max(size)
+	frame.position = Vector2(
+		maxf(0.0, (vp.x - actual.x) * 0.5), maxf(0.0, (vp.y - actual.y) * 0.5)
+	).floor()
 
 
 static func close() -> void:

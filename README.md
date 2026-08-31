@@ -321,6 +321,11 @@ Two things bite on a real device, both fixed here and both worth knowing:
 The safe area insets the desktop along with the shell, so the band beside a camera
 cutout falls through to a black underlay and reads as bezel rather than a teal stripe.
 
+A dialog asks for a width but a container is never smaller than what it holds, so
+anything laid out in columns has to stack on a narrow shell or it overrides that width
+and hangs off the screen. The composer does exactly that with its three fragment lists
+and its verdict/projection pair.
+
 Rows scroll by dragging: `DragScroll` tracks the finger in `_input`, ahead of the GUI,
 because every row is a `Tappable` that swallows the press before a `ScrollContainer`
 could ever see it. A drag past ten pixels cancels the press, so scrolling a shelf never
@@ -338,6 +343,14 @@ project rather than a finished app - the preset sets `application/export_project
 and `xcodebuild` turns it into the `.app`, which is zipped as `Payload/` into an `.ipa`.
 The target is read out of `xcodebuild -list` rather than named, and it is built with
 `-target` not `-scheme`, because the generated project carries no shared scheme.
+
+`audio/general/ios/session_category` is **Playback**. Godot defaults to Ambient, which
+the ring/silent switch mutes, so the game shipped silent on any iPhone with the switch
+flicked - which is most of them.
+
+Quitting from the Start menu ends the process outright on a handheld. iOS ignores
+`get_tree().quit()` and Android can leave the task in the switcher, so `AppShell` follows
+it with `OS.kill(OS.get_process_id())`.
 
 **The `.ipa` is unsigned.** Signing needs a paid Apple Developer account, so CI passes
 `CODE_SIGNING_ALLOWED=NO`. It installs through AltStore or Sideloadly, which re-sign it

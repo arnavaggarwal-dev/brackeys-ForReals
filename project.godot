@@ -19,6 +19,10 @@ boot_splash/show_image=false
 config/icon="res://icon.svg"
 config/quit_on_go_back=false
 
+[audio]
+
+general/ios/session_category=3
+
 [autoload]
 
 Prefs="*res://scripts/prefs.gd"

@@ -52,7 +52,8 @@ static func _waiting() -> Control:
 
 
 static func _loader(px: float) -> Control:
-	var art := SpriteAnim.make("loading", px)
+	# The big one is 265 units across, which is most of a phone in portrait.
+	var art := SpriteAnim.make("loading", minf(px, AppShell.i.size.x * 0.42))
 	art.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	return art
 
