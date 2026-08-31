@@ -248,13 +248,17 @@ godot --headless --path . --export-release "Windows Desktop" builds/windows/ForR
 godot --headless --path . --export-release "Linux"           builds/Linux/ForReals.x86_64
 godot --headless --path . --export-release "Web"             builds/web/index.html
 godot --headless --path . --export-debug   "Android"         builds/android/ForReals.apk
+godot --headless --path . --export-release "iOS"             builds/ios/ForReals.ipa
 ```
+
+The iOS line writes an Xcode project, not an app, and only works on macOS.
 
 
 ### Shipping
 
-`.github/workflows/release.yml` exports Windows, Linux, macOS, web and Android on a
-tagged push and attaches all five to a release. `push.bat` drives it:
+`.github/workflows/release.yml` exports Windows, Linux, macOS, web, Android and iOS on
+a tagged push and attaches all six to a release. Everything but iOS builds on a Linux
+runner; iOS needs macOS for Xcode. `push.bat` drives it:
 
 ```
 push.bat "message"              commit and push
@@ -316,5 +320,20 @@ could ever see it. A drag past ten pixels cancels the press, so scrolling a shel
 buys anything. The back gesture steps out of the open panel and falls through to the
 Start menu; it never ends the run.
 
-`res://assets/android/` holds the launcher icons, generated from `icon.svg` by
-`godot --headless --path . --script res://tools/make_android_icons.gd`.
+`res://assets/android/` and `res://assets/ios/` hold the launcher icons, generated from
+`icon.svg` by `godot --headless --path . --script res://tools/make_mobile_icons.gd`.
+iOS rejects an icon with an alpha channel, so those are flattened onto the boot teal.
+
+### iOS
+
+Built in CI on a macOS runner, because Xcode only exists there. Godot writes an Xcode
+project rather than a finished app - the preset sets `application/export_project_only` -
+and `xcodebuild` turns it into the `.app`, which is zipped as `Payload/` into an `.ipa`.
+The target is read out of `xcodebuild -list` rather than named, and it is built with
+`-target` not `-scheme`, because the generated project carries no shared scheme.
+
+**The `.ipa` is unsigned.** Signing needs a paid Apple Developer account, so CI passes
+`CODE_SIGNING_ALLOWED=NO`. It installs through AltStore or Sideloadly, which re-sign it
+with your own Apple ID, and it is not App Store ready. To sign it properly, import a
+`.p12` and a provisioning profile into the runner keychain and drop the
+`CODE_SIGNING_*` overrides.

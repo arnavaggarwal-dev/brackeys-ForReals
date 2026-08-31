@@ -21,6 +21,7 @@
 *.dmg    filter=lfs diff=lfs merge=lfs -text
 *.apk    filter=lfs diff=lfs merge=lfs -text
 *.aab    filter=lfs diff=lfs merge=lfs -text
+*.ipa    filter=lfs diff=lfs merge=lfs -text
 
 # Large source assets. The bomb is 1.2 MB and rewritten whenever it is
 # re-decimated, which is exactly the shape of thing LFS is for.

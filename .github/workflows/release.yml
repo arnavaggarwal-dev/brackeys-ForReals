@@ -16,31 +16,41 @@ env:
 jobs:
   export:
     name: Export ${{ matrix.name }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - name: macos
+            os: ubuntu-latest
             preset: "macOS"
             out: "ForReals.zip"
             pack: rename
           - name: windows
+            os: ubuntu-latest
             preset: "Windows Desktop"
             out: "ForReals.exe"
             pack: zip
           - name: linux
+            os: ubuntu-latest
             preset: "Linux"
             out: "ForReals.x86_64"
             pack: zip
           - name: web
+            os: ubuntu-latest
             preset: "Web"
             out: "index.html"
             pack: zip
           - name: android
+            os: ubuntu-latest
             preset: "Android"
             out: "ForReals.apk"
             pack: apk
+          - name: ios
+            os: macos-latest
+            preset: "iOS"
+            out: "ForReals.ipa"
+            pack: ipa
 
     steps:
       - name: Check out the project
@@ -112,6 +122,7 @@ jobs:
           PYCFG
 
       - name: Install Godot ${{ env.GODOT_VERSION }} and the export templates
+        if: runner.os == 'Linux'
         run: |
           set -euxo pipefail
           base="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
@@ -125,6 +136,26 @@ jobs:
           curl -fsSL -o templates.tpz "${base}/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
           unzip -q templates.tpz
           template_dir="${HOME}/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "${template_dir}"
+          mv templates/* "${template_dir}/"
+          ls "${template_dir}" | head
+
+      - name: Install Godot ${{ env.GODOT_VERSION }} and the export templates (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          set -euxo pipefail
+          base="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+
+          curl -fsSL -o godot.zip "${base}/Godot_v${GODOT_VERSION}-stable_macos.universal.zip"
+          unzip -q godot.zip
+          # curl sets no quarantine flag, but a runner image may still carry one.
+          xattr -dr com.apple.quarantine Godot.app || true
+          sudo ln -sf "${PWD}/Godot.app/Contents/MacOS/Godot" /usr/local/bin/godot
+          godot --version
+
+          curl -fsSL -o templates.tpz "${base}/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          unzip -q templates.tpz
+          template_dir="${HOME}/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable"
           mkdir -p "${template_dir}"
           mv templates/* "${template_dir}/"
           ls "${template_dir}" | head
@@ -143,6 +174,48 @@ jobs:
             --export-release "${{ matrix.preset }}" \
             "builds/${{ matrix.name }}/${{ matrix.out }}"
 
+      # Godot writes an Xcode project rather than a finished app, and turning that
+      # into an .ipa is xcodebuild's job. Signing is switched off: without an Apple
+      # Developer account there is no certificate to sign with, and an unsigned
+      # .ipa is still installable through AltStore, Sideloadly or a paid account
+      # re-signing it. It cannot go to the App Store as it stands.
+      - name: Build the Xcode project into an unsigned ipa
+        if: matrix.name == 'ios'
+        run: |
+          set -euxo pipefail
+          project="$(find builds/ios -maxdepth 2 -name '*.xcodeproj' | head -1)"
+          if [ -z "${project}" ]; then
+            echo "::error::Godot produced no Xcode project under builds/ios"
+            find builds/ios -maxdepth 3 | head -50
+            exit 1
+          fi
+          cd "$(dirname "${project}")"
+          project="$(basename "${project}")"
+          xcodebuild -project "${project}" -list
+
+          # -target rather than -scheme: Godot's project carries no shared scheme.
+          target="$(xcodebuild -project "${project}" -list |
+            awk '/Targets:/{grab=1; next} /^$/{grab=0} grab{print $1; exit}')"
+          echo "building target ${target}"
+
+          xcodebuild -project "${project}" -target "${target}" \
+            -configuration Release -sdk iphoneos \
+            CONFIGURATION_BUILD_DIR="${PWD}/out" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" CODE_SIGN_ENTITLEMENTS="" \
+            build
+
+          app="$(find out -maxdepth 1 -name '*.app' | head -1)"
+          if [ -z "${app}" ]; then
+            echo "::error::xcodebuild produced no .app"
+            find out -maxdepth 2 | head -50
+            exit 1
+          fi
+          mkdir -p Payload
+          cp -R "${app}" "Payload/$(basename "${app}")"
+          zip -r -9 -q "${GITHUB_WORKSPACE}/builds/ios/ForReals.ipa" Payload
+          ls -lh "${GITHUB_WORKSPACE}/builds/ios/ForReals.ipa"
+
       - name: Package ${{ matrix.name }}
         run: |
           set -euxo pipefail
@@ -152,6 +225,7 @@ jobs:
             zip) ( cd "${src}" && zip -r -9 -q "../${PROJECT_NAME}-${{ matrix.name }}.zip" . ) ;;
             rename) mv "${src}/${{ matrix.out }}" "${out}.zip" ;;
             apk) mv "${src}/${{ matrix.out }}" "${out}.apk" ;;
+            ipa) mv "${src}/${{ matrix.out }}" "${out}.ipa" ;;
           esac
           ls -lh "${out}".*
 
@@ -183,6 +257,7 @@ jobs:
           files: |
             dist/**/*.zip
             dist/**/*.apk
+            dist/**/*.ipa
           generate_release_notes: true
           fail_on_unmatched_files: true
           body: |
@@ -195,7 +270,13 @@ jobs:
             | `ForReals-macos.zip` | macOS universal (unsigned - see below) |
             | `ForReals-web.zip` | browser build, for itch.io or any static host |
             | `ForReals-android.apk` | Android phones and tablets, arm64/arm32/x86_64 |
+            | `ForReals-ios.ipa` | iPhone and iPad, **unsigned** - see below |
 
             The macOS build is ad-hoc signed, not notarised. Gatekeeper will
             refuse it on first launch: right-click the app and choose **Open**,
             or run `xattr -dr com.apple.quarantine ForReals.app`.
+
+            The iOS build is **unsigned**, because signing needs an Apple
+            Developer account. Install it with AltStore or Sideloadly, which
+            re-sign it with your own Apple ID, or re-sign it yourself. It will
+            not install by double-clicking and it is not App Store ready.
