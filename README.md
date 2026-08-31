@@ -337,3 +337,9 @@ The target is read out of `xcodebuild -list` rather than named, and it is built 
 with your own Apple ID, and it is not App Store ready. To sign it properly, import a
 `.p12` and a provisioning profile into the runner keychain and drop the
 `CODE_SIGNING_*` overrides.
+
+Godot refuses to export iOS at all without an App Store team ID, signed or not, so the
+preset carries the placeholder `0000000000`. Set an `APPLE_TEAM_ID` secret and CI writes
+the real one in before exporting, which is what makes the generated Xcode project ready
+to sign. `application/min_ios_version` is 14.0 because the Metal renderer will not go
+lower.

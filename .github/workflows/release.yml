@@ -121,6 +121,33 @@ jobs:
           print("Android preset pointed at", store)
           PYCFG
 
+      # Godot refuses to export iOS at all without a team ID, even though this
+      # build is never signed. A real one is used when the secret is set, so the
+      # generated project is ready to sign; otherwise a placeholder gets it past
+      # the check and xcodebuild ignores it under CODE_SIGNING_ALLOWED=NO.
+      - name: Set the Apple team ID
+        if: matrix.name == 'ios'
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          if [ -z "${APPLE_TEAM_ID:-}" ]; then
+            echo "No APPLE_TEAM_ID secret set; keeping the placeholder and building unsigned."
+            exit 0
+          fi
+          python3 - "${APPLE_TEAM_ID}" <<'PYCFG'
+          import sys
+
+          team = sys.argv[1]
+          with open("export_presets.cfg", encoding="utf-8") as f:
+              cfg = f.read()
+          old = 'application/app_store_team_id="0000000000"'
+          assert old in cfg, "the iOS placeholder team id moved, fix this step"
+          with open("export_presets.cfg", "w", encoding="utf-8", newline="\n") as f:
+              f.write(cfg.replace(old, 'application/app_store_team_id="%s"' % team, 1))
+          print("iOS preset now targets team", team)
+          PYCFG
+
       - name: Install Godot ${{ env.GODOT_VERSION }} and the export templates
         if: runner.os == 'Linux'
         run: |
