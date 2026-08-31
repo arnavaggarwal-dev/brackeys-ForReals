@@ -270,7 +270,7 @@ runner; iOS needs macOS for Xcode. `push.bat` drives it:
 ```
 push.bat "message"              commit and push
 push.bat "message" v1.0.0       ...tag it, which builds and releases
-push.bat "message" v1.0.0 itch  ...and upload to itch.io with butler
+push.bat "message" notag        ...commit and push without tagging
 ```
 
 The macOS build is ad-hoc signed, not notarised. Gatekeeper refuses it on first launch:
