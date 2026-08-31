@@ -200,8 +200,7 @@ static func _agent_row(a: Dictionary) -> Control:
 	col.add_child(head)
 	col.add_child(Style.body(String(a["note"]), Style.ui_r, 11, Style.INK_FAINT, 2))
 	col.add_child(Style.num(
-		"1 every %s  ·  +%.3f susp" % [Game.duration(float(a["every"])), float(a["susp"])],
-		9, Style.INK_SOFT
+		"1 every %s  ·  no suspicion" % Game.duration(float(a["every"])), 9, Style.OK_GREEN
 	))
 	row.add_child(col)
 

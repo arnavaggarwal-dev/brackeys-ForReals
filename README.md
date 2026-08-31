@@ -138,20 +138,27 @@ break a rule the rest of the game obeys:
 ### Assets and people
 
 Assets appear at 300 followers, hires at 750. Prices compound 15% per purchase (the
-scheduler 90%, because one copy buys a whole extra post). Everything you own adds heat
+scheduler 90%, because one copy buys a whole extra post). Every asset you own adds heat
 every second, and that is the whole late game - a burner costs over four thousand times
 more heat per follower than a media partner.
 
 | Asset | From | Produces | Susp/sec | | Agent | From | Does | Susp/sec |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Burner account | £8 | 0.05 f/s | 0.085 | | Unpaid intern | £45 | a like every 6s | 0.060 |
-| Comment farm | £30 | 0.30 f/s | 0.170 | | Freelance stringer | £140 | a fire every 8s | 0.110 |
-| **Scheduling suite** | £60 | **+1 post/day** | 0.250 | | Ghostwriter | £400 | a reply every 11s | 0.200 |
+| Burner account | £8 | 0.05 f/s | 0.085 | | Unpaid intern | £45 | a like every 6s | none |
+| Comment farm | £30 | 0.30 f/s | 0.170 | | Freelance stringer | £140 | a fire every 8s | none |
+| **Scheduling suite** | £60 | **+1 post/day** | 0.250 | | Ghostwriter | £400 | a reply every 11s | none |
 | Engagement pod | £90 | 1.6 f/s | 0.300 | | | | | |
 | Bot swarm | £170 | 9 f/s | 0.475 | | | | | |
 | Sockpuppet network | £320 | 45 f/s | 0.700 | | | | | |
 | Programmatic ad buy | £600 | 220 f/s | 0.950 | | | | | |
 | Media partner | £1,400 | 1,100 f/s | 1.300 | | | | | |
+
+Assets raise suspicion. **People do not.** They choose what to react to and when, and
+being made to answer for a choice you were never offered is not a game - so nothing the
+payroll does is charged to you, while your own likes and replies still are. Under the
+old rule a competent player who hired the staff the game was offering got banned every
+single time; the balance simulation only ever reported otherwise because it never
+thought to hire anyone.
 
 Three levers keep you under the cooling line: pause anything (paused items produce
 nothing and cost no heat), go quiet for a day, or buy `publicly apologised for`.
@@ -166,9 +173,9 @@ the only single purchases, because owning a line twice would mean nothing.
 
 Hired people keep working when the game is shut — assets do not. One real hour buys one
 game day of output, capped at eight, at a fifth of the rate they manage while you watch.
-They raise suspicion the whole time, so a large enough stable can hand you a strike
-while you sleep. **Windows, Linux and Android only**; the web build runs in a tab whose
-clock and storage are both negotiable.
+They cost no suspicion, so you cannot come back to a strike you did not earn.
+**Windows, Linux and Android only**; the web build runs in a tab whose clock and storage
+are both negotiable.
 
 ## How it is built
 

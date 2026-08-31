@@ -111,6 +111,10 @@ static func _simulate(seed_index: int) -> Dictionary:
 		earned += reach * frac
 		heat += susp * frac
 
+		# The people you hire react on their own all day. That reach is theirs and
+		# costs no suspicion, which is the whole reason to hire any of them.
+		earned += reach * _hired_reactions_per_day()
+
 		Game.followers += int(earned * mean_roll * Data.FOLLOWER_SHARE)
 		Game.payout += earned / 1000.0 * Data.PAYOUT_PER_1K
 
@@ -133,6 +137,7 @@ static func _simulate(seed_index: int) -> Dictionary:
 		Game._check_assets()
 		Game._check_agents()
 		_buy_greedy()
+		_hire_greedy()
 
 		for m: Dictionary in Data.MILESTONES:
 			var at := int(m["at"])
@@ -209,6 +214,39 @@ static func _asset_efficiency(a: Dictionary) -> float:
 	if gained <= 0.0:
 		return 0.0
 	return gained / maxf(0.001, heat)
+
+
+# A day's worth of reactions from everyone on the payroll, as a fraction of a post.
+static func _hired_reactions_per_day() -> float:
+	var total := 0.0
+	for a: Dictionary in Data.AGENTS:
+		var id := String(a["id"])
+		if Game.is_paused(id):
+			continue
+		var per_day := Data.DAY_BASE_SECONDS / float(a["every"])
+		total += float(a["impact"]) * per_day * Game.agent_count(id)
+	return total
+
+
+# Hiring costs no suspicion at all now, so the only thing holding it back is the
+# price, and a competent player hires whoever earns most per pound.
+static func _hire_greedy() -> void:
+	if not Game.agents_open():
+		return
+	for pass_i in 6:
+		var best: Dictionary = {}
+		var best_value := 0.0
+		for a: Dictionary in Data.AGENTS:
+			var cost := Game.agent_cost(a)
+			if cost > int(Game.payout):
+				continue
+			var value: float = float(a["impact"]) / float(a["every"]) / float(cost)
+			if value > best_value:
+				best_value = value
+				best = a
+		if best.is_empty():
+			return
+		Game.buy_agent(best, 1)
 
 
 static func _buy_greedy() -> void:

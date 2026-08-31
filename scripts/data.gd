@@ -93,17 +93,17 @@ const AGENTS_UNLOCK := 750
 const AGENTS := [
 	{
 		"id": "intern", "name": "Unpaid intern", "cost": 45.0,
-		"every": 6.0, "impact": LIKE_IMPACT, "susp": 0.060,
+		"every": 6.0, "impact": LIKE_IMPACT,
 		"note": "likes things on your behalf, badly",
 	},
 	{
 		"id": "stringer", "name": "Freelance stringer", "cost": 140.0,
-		"every": 8.0, "impact": FIRE_IMPACT, "susp": 0.110,
+		"every": 8.0, "impact": FIRE_IMPACT,
 		"note": "boosts whatever is loudest, for a flat fee",
 	},
 	{
 		"id": "ghost", "name": "Ghostwriter", "cost": 400.0,
-		"every": 11.0, "impact": COMMENT_IMPACT, "susp": 0.200,
+		"every": 11.0, "impact": COMMENT_IMPACT,
 		"note": "replies in your voice while you are asleep",
 	},
 ]

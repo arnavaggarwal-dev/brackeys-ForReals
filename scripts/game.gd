@@ -389,15 +389,6 @@ func buy_agent(a: Dictionary, n: int = 1) -> void:
 	view_dirty.emit()
 
 
-func agent_suspicion_per_second() -> float:
-	var total := 0.0
-	for a: Dictionary in Data.AGENTS:
-		if is_paused(String(a["id"])):
-			continue
-		total += float(a["susp"]) * agent_count(String(a["id"]))
-	return total
-
-
 func _tick_agents(delta: float) -> void:
 	for a: Dictionary in Data.AGENTS:
 		var id := String(a["id"])
@@ -408,11 +399,8 @@ func _tick_agents(delta: float) -> void:
 		var every := float(a["every"])
 		while clock >= every:
 			clock -= every
-			_react(id, float(a["impact"]))
+			_react(id, float(a["impact"]), false)
 		_agent_clocks[id] = clock
-	suspicion = clampf(
-		suspicion + agent_suspicion_per_second() * delta, 0.0, Data.SUSPICION_LIMIT + 40.0
-	)
 
 
 func offline_supported() -> bool:
@@ -453,10 +441,6 @@ func apply_offline(real_seconds: float) -> Dictionary:
 
 	followers += gained
 	payout += earned
-	suspicion = clampf(
-		suspicion + agent_suspicion_per_second() * game_seconds,
-		0.0, Data.SUSPICION_LIMIT + 40.0
-	)
 	_check_milestone()
 	_check_store()
 	_check_assets()
@@ -511,7 +495,7 @@ func asset_suspicion_per_second() -> float:
 
 
 func heat_per_second() -> float:
-	return asset_suspicion_per_second() + agent_suspicion_per_second()
+	return asset_suspicion_per_second()
 
 
 func heat_ratio() -> float:
@@ -837,7 +821,9 @@ func comment_reach() -> int:
 	return int(round(projected_reach() * Data.COMMENT_IMPACT))
 
 
-func _react(kind: String, impact: float) -> Dictionary:
+# `charged` is false for the people you hire. They pick what to react to and when,
+# and being made to answer for a choice you were never offered is not a game.
+func _react(kind: String, impact: float, charged: bool = true) -> Dictionary:
 	var reach := int(round(projected_reach() * impact))
 	if projected_reach() > 0:
 		reach = maxi(1, reach)
@@ -846,9 +832,10 @@ func _react(kind: String, impact: float) -> Dictionary:
 	))
 	if reach > 0:
 		gained = maxi(1, gained)
-	suspicion = clampf(
-		suspicion + projected_suspicion() * impact, 0.0, Data.SUSPICION_LIMIT + 40.0
-	)
+	if charged:
+		suspicion = clampf(
+			suspicion + projected_suspicion() * impact, 0.0, Data.SUSPICION_LIMIT + 40.0
+		)
 	_post_salt += 1
 	var record := {
 		"uid": "%s_%d" % [kind, _post_salt],
