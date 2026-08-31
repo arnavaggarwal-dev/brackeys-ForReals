@@ -9,6 +9,10 @@ const EDGE := 8.0
 const TASKBAR_H := Taskbar.HEIGHT
 const TOAST_SCALE := Toast.SCALE
 
+# Phones and tablets get a larger interface than the desktop 0.85, because a
+# finger is blunter than a mouse pointer. Higher means bigger, see the README.
+const HANDHELD_UI_SCALE := 1.0
+
 var desktop: ColorRect
 var glitch_layer: ColorRect
 var glitch_mat: ShaderMaterial
@@ -37,8 +41,11 @@ var _drift := 0.0
 func _ready() -> void:
 	i = self
 	_fit_window()
+	_fit_handheld()
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	_build()
+	get_viewport().size_changed.connect(_apply_safe_area)
+	_apply_safe_area()
 	Game.view_dirty.connect(_on_view_dirty)
 	Game.nav_dirty.connect(_on_view_dirty)
 	Game.day_started.connect(_on_day)
@@ -114,6 +121,31 @@ func _fit_window() -> void:
 	DisplayServer.window_set_position(
 		usable.position + (usable.size - fit) / 2
 	)
+
+
+static func is_handheld() -> bool:
+	return OS.has_feature("mobile") or OS.has_feature("android") or OS.has_feature("ios")
+
+
+func _fit_handheld() -> void:
+	if not is_handheld():
+		return
+	get_tree().root.content_scale_factor = HANDHELD_UI_SCALE
+
+
+# Keeps the three windows clear of a notch, a punch hole, or the gesture bar.
+func _apply_safe_area() -> void:
+	if shell == null or not is_handheld():
+		return
+	var win := DisplayServer.window_get_size()
+	var safe := DisplayServer.get_display_safe_area()
+	if win.x <= 0 or win.y <= 0 or safe.size.x <= 0 or safe.size.y <= 0:
+		return
+	var to_ui := size / Vector2(win)
+	shell.offset_left = float(safe.position.x) * to_ui.x
+	shell.offset_top = float(safe.position.y) * to_ui.y
+	shell.offset_right = -float(win.x - safe.position.x - safe.size.x) * to_ui.x
+	shell.offset_bottom = -float(win.y - safe.position.y - safe.size.y) * to_ui.y
 
 
 func _build() -> void:
@@ -213,11 +245,16 @@ func _scroller() -> ScrollContainer:
 	var pad := Style.margins(body, 10, 10, 10, 12)
 	pad.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	s.add_child(pad)
+	DragScroll.attach(s)
 	return s
 
 
 func _body_of(s: ScrollContainer) -> VBoxContainer:
-	return s.get_child(0).get_child(0) as VBoxContainer
+	# The scroller also carries a DragScroll, so the padding is found by type.
+	for child in s.get_children():
+		if child is MarginContainer:
+			return child.get_child(0) as VBoxContainer
+	return null
 
 
 func _shader_mat(path: String) -> ShaderMaterial:
@@ -288,17 +325,31 @@ func _unhandled_input(event: InputEvent) -> void:
 
 	if not event.is_action_pressed("ui_cancel"):
 		return
+	if _go_back():
+		get_viewport().set_input_as_handled()
+
+
+# Escape on the desktop and the Android back gesture both mean "out of this one
+# thing". Neither may throw the run away, which is why quit_on_go_back is off.
+func _go_back() -> bool:
 	if NukeScreen.running():
-		return
+		return false
 	if StartMenu.is_open():
 		StartMenu.close()
-		get_viewport().set_input_as_handled()
-		return
+		return true
 	if Game.screen == "app" and veil.get_child_count() > 0:
 		Composer.close()
 		Store.close()
 		Dialog.close()
-		get_viewport().set_input_as_handled()
+		return true
+	return false
+
+
+func _notification(what: int) -> void:
+	if what != NOTIFICATION_WM_GO_BACK_REQUEST:
+		return
+	if not _go_back():
+		StartMenu.toggle()
 
 
 func _on_view_dirty() -> void:

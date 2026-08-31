@@ -56,6 +56,7 @@ static func open(
 	var pad := Style.margins(client, 12, 12, 12, 12)
 	pad.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(pad)
+	DragScroll.attach(scroll)
 
 	var footer := Style.vbox(0)
 	footer.size_flags_horizontal = Control.SIZE_EXPAND_FILL

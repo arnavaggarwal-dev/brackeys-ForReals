@@ -10,6 +10,9 @@ enum Look {
 	ACTION,
 }
 
+# A finger that travels this far was scrolling the list, not pressing the row.
+const DRAG_SLOP := 10.0
+
 var look: Look = Look.BUTTON
 var selected := false
 
@@ -17,6 +20,7 @@ var _box: BevelBox
 var _content: MarginContainer
 var _pad := Vector4(10, 5, 10, 5)
 var _pressed_in := false
+var _press_at := Vector2.ZERO
 var _enabled := true
 var _hovering := false
 
@@ -113,15 +117,12 @@ func _apply(down: bool) -> void:
 	_content.add_theme_constant_override("margin_bottom", b - nudge)
 
 
+# Only the mouse is answered here, emulated or real. The raw touch is deliberately
+# left alone so it reaches the ScrollContainer above and the list still scrolls.
 func _refuse(event: InputEvent) -> void:
-	var pressed := false
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-		pressed = event.pressed
-	elif event is InputEventScreenTouch:
-		pressed = event.pressed
-	else:
+	if not (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT):
 		return
-	if pressed:
+	if event.pressed:
 		Sfx.buzz(0.12)
 	accept_event()
 
@@ -142,24 +143,37 @@ func _gui_input(event: InputEvent) -> void:
 	if not _enabled:
 		_refuse(event)
 		return
-	var down := false
-	var up := false
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-		down = event.pressed
-		up = not event.pressed
-	elif event is InputEventScreenTouch:
-		down = event.pressed
-		up = not event.pressed
-	else:
+
+	# A finger that lands on a row may only be starting a scroll, so the press is
+	# dropped the moment that finger travels. The touch itself is never accepted;
+	# emulate_mouse_from_touch turns it into the mouse events handled below.
+	if event is InputEventScreenDrag:
+		_drop_if_dragged(event.position)
 		return
+
+	if not (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT):
+		return
+	var down: bool = event.pressed
+	var up: bool = not event.pressed
 
 	if down:
 		_pressed_in = true
+		_press_at = event.position
 		_apply(true)
 		accept_event()
 	elif up and _pressed_in:
 		_pressed_in = false
 		_apply(false)
+		accept_event()
+		# That press turned out to be a finger scrolling the list past this row.
+		if DragScroll.scrolling:
+			return
 		Sfx.tap()
 		pressed.emit()
-		accept_event()
+
+
+func _drop_if_dragged(at: Vector2) -> void:
+	if not _pressed_in or at.distance_to(_press_at) < DRAG_SLOP:
+		return
+	_pressed_in = false
+	_apply(false)

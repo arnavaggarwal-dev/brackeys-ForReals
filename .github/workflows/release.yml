@@ -24,19 +24,23 @@ jobs:
           - name: macos
             preset: "macOS"
             out: "ForReals.zip"
-            repack: false
+            pack: rename
           - name: windows
             preset: "Windows Desktop"
             out: "ForReals.exe"
-            repack: true
+            pack: zip
           - name: linux
             preset: "Linux"
             out: "ForReals.x86_64"
-            repack: true
+            pack: zip
           - name: web
             preset: "Web"
             out: "index.html"
-            repack: true
+            pack: zip
+          - name: android
+            preset: "Android"
+            out: "ForReals.apk"
+            pack: apk
 
     steps:
       - name: Check out the project
@@ -47,6 +51,65 @@ jobs:
       - name: Fetch the source assets that live in LFS
         run: |
           git lfs pull --include="assets/**" --exclude=""
+
+      - name: Install a JDK for the Android tooling
+        if: matrix.name == 'android'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up the Android SDK
+        if: matrix.name == 'android'
+        uses: android-actions/setup-android@v3
+
+      # Godot signs the APK itself, reading the keystore out of the preset. A
+      # repository secret is used when one is set, so that successive releases
+      # install over each other; without it a throwaway key is made here, which
+      # still produces an APK a phone will accept.
+      - name: Provide an Android signing key
+        if: matrix.name == 'android'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          store="${RUNNER_TEMP}/forreals.keystore"
+          if [ -n "${KEYSTORE_BASE64}" ]; then
+            echo "${KEYSTORE_BASE64}" | base64 -d > "${store}"
+            pass="${KEYSTORE_PASSWORD}"
+            alias="${KEY_ALIAS}"
+            echo "Signing with the repository keystore."
+          else
+            pass="forreals"
+            alias="forreals"
+            keytool -genkeypair -v -keystore "${store}" -alias "${alias}" -keyalg RSA -keysize 2048 -validity 10000 -storepass "${pass}" -keypass "${pass}" -dname "CN=ForReals, OU=Jam, O=ForReals, C=GB"
+            echo "::warning::No ANDROID_KEYSTORE_BASE64 secret is set, so this APK is signed with a throwaway key and will not install over an earlier release."
+          fi
+          python3 - "${store}" "${alias}" "${pass}" <<'PYCFG'
+          import sys
+
+          store, alias, password = sys.argv[1:4]
+          head = "[preset.4.options]\n"
+          with open("export_presets.cfg", encoding="utf-8") as f:
+              cfg = f.read()
+          assert head in cfg, "the Android preset is no longer preset.4, fix this step"
+          keys = "".join(
+              '%s="%s"\n' % (key, value)
+              for key, value in [
+                  ("keystore/debug", store),
+                  ("keystore/debug_user", alias),
+                  ("keystore/debug_password", password),
+                  ("keystore/release", store),
+                  ("keystore/release_user", alias),
+                  ("keystore/release_password", password),
+              ]
+          )
+          with open("export_presets.cfg", "w", encoding="utf-8", newline="\n") as f:
+              f.write(cfg.replace(head, head + keys, 1))
+          print("Android preset pointed at", store)
+          PYCFG
 
       - name: Install Godot ${{ env.GODOT_VERSION }} and the export templates
         run: |
@@ -83,20 +146,20 @@ jobs:
       - name: Package ${{ matrix.name }}
         run: |
           set -euxo pipefail
-          if [ "${{ matrix.repack }}" = "true" ]; then
-            ( cd "builds/${{ matrix.name }}" && zip -r -9 -q \
-              "../${PROJECT_NAME}-${{ matrix.name }}.zip" . )
-          else
-            mv "builds/${{ matrix.name }}/${{ matrix.out }}" \
-               "builds/${PROJECT_NAME}-${{ matrix.name }}.zip"
-          fi
-          ls -lh "builds/${PROJECT_NAME}-${{ matrix.name }}.zip"
+          src="builds/${{ matrix.name }}"
+          out="builds/${PROJECT_NAME}-${{ matrix.name }}"
+          case "${{ matrix.pack }}" in
+            zip) ( cd "${src}" && zip -r -9 -q "../${PROJECT_NAME}-${{ matrix.name }}.zip" . ) ;;
+            rename) mv "${src}/${{ matrix.out }}" "${out}.zip" ;;
+            apk) mv "${src}/${{ matrix.out }}" "${out}.apk" ;;
+          esac
+          ls -lh "${out}".*
 
       - name: Upload ${{ matrix.name }}
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.name }}
-          path: builds/${{ env.PROJECT_NAME }}-${{ matrix.name }}.zip
+          path: builds/${{ env.PROJECT_NAME }}-${{ matrix.name }}.*
           if-no-files-found: error
           retention-days: 14
 
@@ -117,7 +180,9 @@ jobs:
       - name: Publish
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/**/*.zip
+          files: |
+            dist/**/*.zip
+            dist/**/*.apk
           generate_release_notes: true
           fail_on_unmatched_files: true
           body: |
@@ -129,6 +194,7 @@ jobs:
             | `ForReals-linux.zip` | Linux x86_64 |
             | `ForReals-macos.zip` | macOS universal (unsigned - see below) |
             | `ForReals-web.zip` | browser build, for itch.io or any static host |
+            | `ForReals-android.apk` | Android phones and tablets, arm64/arm32/x86_64 |
 
             The macOS build is ad-hoc signed, not notarised. Gatekeeper will
             refuse it on first launch: right-click the app and choose **Open**,

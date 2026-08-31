@@ -416,8 +416,10 @@ func _tick_agents(delta: float) -> void:
 
 
 func offline_supported() -> bool:
+	# Anywhere user:// survives the app being closed and the clock is the system's.
+	# The web build is out, because a tab's storage and clock are both negotiable.
 	var os_name := OS.get_name()
-	return os_name == "Windows" or os_name == "Linux"
+	return os_name == "Windows" or os_name == "Linux" or os_name == "Android"
 
 
 func offline_reach_per_second() -> float:

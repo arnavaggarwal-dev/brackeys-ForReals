@@ -167,8 +167,8 @@ the only single purchases, because owning a line twice would mean nothing.
 Hired people keep working when the game is shut — assets do not. One real hour buys one
 game day of output, capped at eight, at a fifth of the rate they manage while you watch.
 They raise suspicion the whole time, so a large enough stable can hand you a strike
-while you sleep. **Windows and Linux only**; the web build runs in a tab whose clock and
-storage are both negotiable.
+while you sleep. **Windows, Linux and Android only**; the web build runs in a tab whose
+clock and storage are both negotiable.
 
 ## How it is built
 
@@ -247,13 +247,14 @@ filter** or the build falls back to a stub.
 godot --headless --path . --export-release "Windows Desktop" builds/windows/ForReals.exe
 godot --headless --path . --export-release "Linux"           builds/Linux/ForReals.x86_64
 godot --headless --path . --export-release "Web"             builds/web/index.html
+godot --headless --path . --export-debug   "Android"         builds/android/ForReals.apk
 ```
 
 
 ### Shipping
 
-`.github/workflows/release.yml` exports Windows, Linux, macOS and web on a tagged push
-and attaches all four to a release. `push.bat` drives it:
+`.github/workflows/release.yml` exports Windows, Linux, macOS, web and Android on a
+tagged push and attaches all five to a release. `push.bat` drives it:
 
 ```
 push.bat "message"              commit and push
@@ -263,3 +264,30 @@ push.bat "message" v1.0.0 itch  ...and upload to itch.io with butler
 
 The macOS build is ad-hoc signed, not notarised. Gatekeeper refuses it on first launch:
 right-click and **Open**, or `xattr -dr com.apple.quarantine ForReals.app`.
+
+### Android
+
+The APK carries arm64-v8a, armeabi-v7a and x86_64, so it covers phones, tablets and
+Chromebooks; that is most of the 80 MB. It is exported from the prebuilt templates, so
+no Gradle and no NDK are needed - only a **JDK 17 or newer** and the Android SDK
+build-tools, both pointed at from *Editor Settings -> Export -> Android*. Android Studio
+already ships a suitable JDK at `.../Android Studio/jbr`.
+
+Signing is a preset setting, not an environment variable. CI writes `keystore/release`,
+`keystore/release_user` and `keystore/release_password` into `export_presets.cfg` before
+exporting, from the `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD` and
+`ANDROID_KEY_ALIAS` repository secrets. Without those secrets it makes a throwaway key,
+which still installs but will not install *over* an earlier release. To build locally,
+inject the same three keys by hand and take them out again afterwards - do not commit an
+absolute keystore path.
+
+The interface is locked to landscape (`window/handheld/orientation`), sits inside the
+display safe area, and is scaled up a notch on a handheld because a finger is blunter
+than a mouse pointer. Rows scroll by dragging: `DragScroll` tracks the finger in
+`_input`, ahead of the GUI, because every row is a `Tappable` that swallows the press
+before a `ScrollContainer` could ever see it. A drag past ten pixels cancels the press,
+so scrolling a shelf never buys anything. The back gesture steps out of the open panel
+and falls through to the Start menu; it never ends the run.
+
+`res://assets/android/` holds the launcher icons, generated from `icon.svg` by
+`godot --headless --path . --script res://tools/make_android_icons.gd`.
