@@ -147,8 +147,6 @@ echo [*] itch: web...
 "%BUTLER%" push "builds\web" "%ITCH_TARGET%:html" %VFLAG%
 if errorlevel 1 goto :fail
 
-REM macOS cannot be exported on Windows, so it comes back off the release CI
-REM just built. Without a tag there is no release to take it from.
 if /i "%TAG%"=="none" (
     echo [!] No tag, so no macOS build to fetch. itch osx stays where it was.
     goto :status

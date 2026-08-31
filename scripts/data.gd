@@ -418,7 +418,7 @@ const WEEKDAYS := ["monday", "tuesday", "wednesday", "thursday", "friday", "satu
 const SUGGESTED_HANDLES := [
 	"skibiditoilet", "normal_person_9", "just.here.lurking",
 	"grindset_daily", "not_a_bot_promise", "moth_to_the_lamp",
-	"darsh_vader", "perropatata", 
+	"darsh_vader", "perropatata",
 ]
 
 

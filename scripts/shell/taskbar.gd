@@ -27,10 +27,6 @@ func _ready() -> void:
 		"panel", Style.box(Style.SURFACE, BevelBox.Style3D.RAISED, 4, 3, 4, 3)
 	)
 
-	# The row sits in a plain Control rather than straight in the panel, so that
-	# what it holds can never set the taskbar's minimum width. It used to: on a
-	# phone in portrait the buttons wanted 411 units against a 385 unit screen,
-	# and the whole shell was dragged that far off the right edge to suit them.
 	var frame := Control.new()
 	frame.clip_contents = true
 	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -75,7 +71,6 @@ static func _start_button() -> Control:
 	return start
 
 
-# One button per window, the way a taskbar has always listed what is open.
 func _pane_button(p: Dictionary) -> Control:
 	var id := String(p["id"])
 	var task := Tappable.new(Vector4(6, 3, 7, 4), Tappable.Look.LIST)
@@ -113,9 +108,6 @@ func _tray() -> Control:
 	eye.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(eye)
 
-	# Hidden rather than left out, so refresh() still has something to talk to and
-	# a hidden child costs an HBoxContainer no width. The Today pane already opens
-	# with this same meter, so a phone loses nothing by dropping it here.
 	meter = Meter.new(1.0, Style.BAR_FILL, 88, 14)
 	meter.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	meter.visible = not AppShell.narrow

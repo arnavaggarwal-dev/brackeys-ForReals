@@ -1,21 +1,10 @@
 @echo off
 setlocal enabledelayedexpansion
-rem ---------------------------------------------------------------------------
-rem  Boots the Android emulator, installs ForReals.apk next to this file, and
-rem  starts it.
-rem
-rem    run-android.bat                 first AVD found, phone geometry
-rem    run-android.bat Pixel_6a        that AVD
-rem    run-android.bat Pixel_6a tablet 2560x1600 at 276dpi instead
-rem
-rem  Close the emulator window when you are done, or run: adb emu kill
-rem ---------------------------------------------------------------------------
 
 set "APK=%~dp0ForReals.apk"
 set "PKG=com.forreals.game"
 set "ACTIVITY=%PKG%/com.godot.game.GodotAppLauncher"
 
-rem -- Find the SDK ----------------------------------------------------------
 set "SDK=%ANDROID_HOME%"
 if not defined SDK set "SDK=%ANDROID_SDK_ROOT%"
 if not defined SDK set "SDK=%LOCALAPPDATA%\Android\Sdk"
@@ -38,7 +27,6 @@ if not exist "%APK%" (
 	exit /b 1
 )
 
-rem -- Arguments -------------------------------------------------------------
 set "AVD=%~1"
 set "SHAPE=%~2"
 if /i "%~1"=="tablet" (
@@ -56,7 +44,6 @@ if not defined AVD (
 	exit /b 1
 )
 
-rem -- Boot, unless something is already attached -----------------------------
 "%ADB%" start-server >nul 2>&1
 set "RUNNING="
 for /f "usebackq tokens=2" %%D in (`"%ADB%" devices ^| findstr /r "device$"`) do set "RUNNING=1"
@@ -65,8 +52,6 @@ if defined RUNNING (
 	echo A device is already attached, using that one.
 ) else (
 	echo Booting %AVD% ...
-	rem -gpu host, because software Vulkan crashes this emulator outright, and
-	rem 4G, because the stock 2G lets the low memory killer take the game down.
 	start "Android emulator - %AVD%" "%EMULATOR%" -avd %AVD% ^
 		-memory 4096 -no-snapshot -no-boot-anim -no-audio -gpu host
 )
@@ -83,7 +68,6 @@ exit /b 1
 :booted
 echo Booted.
 
-rem -- Tablet geometry -------------------------------------------------------
 if /i "%SHAPE%"=="tablet" (
 	echo Switching the display to 2560x1600 at 276dpi ...
 	"%ADB%" shell wm size 1600x2560 >nul
@@ -91,7 +75,6 @@ if /i "%SHAPE%"=="tablet" (
 	ping -n 6 127.0.0.1 >nul
 )
 
-rem -- Install and start -----------------------------------------------------
 echo Installing ForReals.apk ...
 "%ADB%" install -r "%APK%" || (
 	echo Install failed. If it complains about signatures, remove the old copy:
