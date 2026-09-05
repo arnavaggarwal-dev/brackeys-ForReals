@@ -23,10 +23,7 @@ static func build() -> Control:
 	col.add_child(used)
 	col.add_child(Style.spacer(20))
 
-	col.add_child(Style.group(
-		"Under review" if Game.prologue else "Objective",
-		_ousting() if Game.prologue else _objective()
-	))
+	col.add_child(Style.group("Objective", _objective()))
 	col.add_child(Style.spacer(18))
 	col.add_child(Style.group("Active Posts", _topic_board()))
 	col.add_child(Style.spacer(18))
@@ -169,17 +166,6 @@ static func _objective() -> Control:
 	var note := Style.body(String(target["note"]), Style.ui_r, 13, Style.INK_SOFT, 4)
 	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(note)
-	return col
-
-
-static func _ousting() -> Control:
-	var col := Style.vbox(6)
-	col.add_child(Style.label("Two strikes", Style.ui_b, 16, Style.ALARM))
-	col.add_child(Style.body(
-		"There is no appeal, no notification and no number you were ever shown. "
-		+ "You have one post left.",
-		Style.ui_r, 12, Style.INK_SOFT, 4
-	))
 	return col
 
 

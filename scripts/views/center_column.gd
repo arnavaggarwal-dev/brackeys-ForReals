@@ -11,7 +11,7 @@ static func build() -> Control:
 
 	var today := _mine_on(Game.day)
 	if today.is_empty():
-		col.add_child(_last_words() if Game.prologue else _nothing_yet())
+		col.add_child(_nothing_yet())
 		col.add_child(Style.spacer(6))
 	else:
 		col.add_child(Style.section("TODAY", Style.HOT))
@@ -77,31 +77,6 @@ static func _empty_feed() -> Control:
 	out.add_child(Style.spacer(28))
 	out.add_child(_loader(LOADER_PX * LOADER_BIG))
 	return out
-
-
-static func _last_words() -> Control:
-	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override(
-		"panel", Style.box(Style.ALARM_WASH, BevelBox.Style3D.RAISED, 16, 14, 16, 16)
-	)
-	var row := Style.hbox(14)
-	var glyph := Icon.new(Icon.Kind.WARNING, 32, Style.ALARM)
-	glyph.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	row.add_child(glyph)
-
-	var col := Style.vbox(6)
-	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	col.add_child(Style.label(
-		"Everyone is already talking about you.", Style.ui_b, 17, Style.INK
-	))
-	col.add_child(Style.body(
-		"Nine million people follow this account and not one of these posts is "
-		+ "from somebody who does. Say something. It is the only move you have.",
-		Style.ui_r, 14, Style.INK_SOFT, 5
-	))
-	row.add_child(col)
-	panel.add_child(row)
-	return panel
 
 
 static func _nothing_yet() -> Control:

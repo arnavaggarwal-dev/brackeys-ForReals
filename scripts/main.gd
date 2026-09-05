@@ -78,12 +78,12 @@ func _ready() -> void:
 	elif Save.has_save():
 		SignInScreen.show_signin()
 	else:
-		Game.begin_prologue()
+		TosScreen.show_tos()
 
 
 func _maybe_tutorial() -> void:
 	await get_tree().create_timer(0.6).timeout
-	if Game.screen == "app" and not Game.prologue and veil.get_child_count() == 0:
+	if Game.screen == "app" and veil.get_child_count() == 0:
 		Tutorial.maybe_start()
 
 
@@ -345,8 +345,7 @@ func _on_screen(s: String) -> void:
 		"app":
 			clear_veil()
 			render_view()
-			if not Game.prologue:
-				_maybe_tutorial()
+			_maybe_tutorial()
 		"over":
 			GameOverScreen.show_over()
 

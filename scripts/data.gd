@@ -23,23 +23,6 @@ const RECOMMEND_MAX := 7
 const FEED_FOLLOW_WINDOW := 7
 const COMMENT_IMPACT := 1.0 / 8.0
 
-const PROLOGUE_HANDLE := "rt_hon_marsh"
-const PROLOGUE_NAME := "Rt Hon. A. Marsh MP"
-const PROLOGUE_FOLLOWERS := 9_900_000
-
-const PROLOGUE_FEED := [
-	{"h": "hansard_uk",   "n": "Hansard",       "topic": "politics",
-	 "text": "the minister has been asked the same question fourteen times today."},
-	{"h": "nightdesk",    "n": "Night Desk",    "topic": "war",
-	 "text": "everyone you know has been quiet about the minister's phone records."},
-	{"h": "doorstep_now", "n": "Doorstep",      "topic": "politics",
-	 "text": "your local council actually cares about what the minister said in march."},
-	{"h": "lab_notes",    "n": "Rafi",          "topic": "science",
-	 "text": "the lab has been lying to you about the water in this town."},
-	{"h": "everydietlie", "n": "everydietlie",  "topic": "food",
-	 "text": "big food quietly funded the minister's second home."},
-]
-
 const STORE_UNLOCK := 100
 const ASSETS_UNLOCK := 300
 const LOOSE_AFTER_DAY := 3

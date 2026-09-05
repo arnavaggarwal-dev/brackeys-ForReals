@@ -59,7 +59,6 @@ var people: Dictionary = {}
 var suggestions: Array = []
 var my_reactions: Array = []
 
-var prologue := false
 var run_id := 0
 var _tick := false
 var _post_salt := 0
@@ -84,7 +83,6 @@ func _process(delta: float) -> void:
 func reset() -> void:
 	run_id += 1
 	screen = "signin"
-	prologue = false
 	day = 1
 	posts_today = 0
 	payout = 0.0
@@ -128,47 +126,6 @@ func reset() -> void:
 	roll_suggestions()
 	_seed_feed()
 	day_left = day_length()
-
-
-func begin_prologue() -> void:
-	reset()
-	prologue = true
-	handle = Data.PROLOGUE_HANDLE
-	avatar = Data.AVATAR_CHOICES[4]
-	followers = Data.PROLOGUE_FOLLOWERS
-	following = []
-	suspicion = Data.SUSPICION_LIMIT - 6.0
-	strikes = Data.STRIKES_ALLOWED - 1
-	day = 1
-	screen = "app"
-
-	feed = []
-	for i in Data.PROLOGUE_FEED.size():
-		var src: Dictionary = Data.PROLOGUE_FEED[i]
-		_post_salt += 1
-		feed.append({
-			"uid": "p_%d" % _post_salt,
-			"acc": {
-				"h": String(src["h"]), "n": String(src["n"]),
-				"topic": String(src["topic"]), "followers": 40_000 * (i + 3), "at": 0,
-			},
-			"text": String(src["text"]),
-			"tags": [String(Data.TOPICS[src["topic"]]["tag"]), "#breaking"],
-			"charged": true,
-			"day": 1,
-			"at": elapsed - 40.0 * (i + 1),
-			"progress": 1.0,
-			"likes": 9_000 * (i + 2),
-			"replies": 2_400 * (i + 1),
-			"fire": 6_100 * (i + 1),
-			"t_likes": 9_000 * (i + 2),
-			"t_replies": 2_400 * (i + 1),
-			"t_fire": 6_100 * (i + 1),
-		})
-
-	_tick = true
-	screen_changed.emit(screen)
-	day_started.emit(day)
 
 
 func begin(chosen_handle: String, chosen_avatar: Dictionary) -> void:
@@ -690,6 +647,7 @@ func _check_store() -> void:
 	)
 	nav_dirty.emit()
 	view_dirty.emit()
+	Tutorial.unlocked("store")
 
 
 func _check_comments() -> void:
@@ -698,6 +656,7 @@ func _check_comments() -> void:
 	comments_unlocked = true
 	toast_requested.emit("You can reply now", "a reply is a third of a post", false)
 	view_dirty.emit()
+	Tutorial.unlocked("comments")
 
 
 func _check_agents() -> void:
@@ -706,6 +665,7 @@ func _check_agents() -> void:
 	agents_unlocked = true
 	toast_requested.emit("You can hire people now", "slower than bots, and far quieter", false)
 	view_dirty.emit()
+	Tutorial.unlocked("agents")
 
 
 func _check_assets() -> void:
@@ -714,6 +674,7 @@ func _check_assets() -> void:
 	assets_unlocked = true
 	toast_requested.emit("You can buy an audience now", "assets, bottom right", false)
 	view_dirty.emit()
+	Tutorial.unlocked("assets")
 
 
 func owns(f: Dictionary) -> bool:
@@ -1003,13 +964,6 @@ func publish() -> void:
 		"reach %s - %d posts left today" % [commas(reach), posts_per_day() - posts_today],
 		false
 	)
-	if prologue:
-		suspicion = Data.SUSPICION_LIMIT
-		nav_dirty.emit()
-		view_dirty.emit()
-		await get_tree().create_timer(2.2).timeout
-		_strike()
-		return
 	if suspicion >= Data.SUSPICION_LIMIT:
 		_strike()
 	nav_dirty.emit()
@@ -1017,8 +971,6 @@ func publish() -> void:
 
 
 func _check_milestone() -> void:
-	if prologue:
-		return
 	while milestone < Data.MILESTONES.size() and followers >= int(Data.MILESTONES[milestone]["at"]):
 		var m: Dictionary = Data.MILESTONES[milestone]
 		milestone += 1
@@ -1064,7 +1016,7 @@ func _strike() -> void:
 	glitch.emit(0.12)
 	Sfx.shear(0.6)
 	if strikes >= Data.STRIKES_ALLOWED:
-		_finish("ousted" if prologue else "banned")
+		_finish("banned")
 		return
 	toast_requested.emit(
 		"Strike %d of %d" % [strikes, Data.STRIKES_ALLOWED],

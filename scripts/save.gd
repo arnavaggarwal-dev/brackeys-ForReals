@@ -1,9 +1,32 @@
 extends Node
 
 const PATH := "user://forreals.save"
-const VERSION := 2
+
+# Bump whenever a save written by the current build could not be read correctly
+# by the one before it, and give _migrate a step that brings the old shape up.
+const VERSION := 3
+const OLDEST_READABLE := 1
+
 const AUTOSAVE_SECONDS := 5.0
 const HEARTBEAT_SECONDS := 60.0
+
+# Everything a current save is allowed to contain. Anything else in the file was
+# written by a build that wanted it and this one does not, so it is dropped
+# rather than carried forward for ever.
+const FIELDS := [
+	"version", "at_wall", "run_id", "post_salt", "handle", "avatar", "day",
+	"day_left", "elapsed", "posts_today", "followers", "following",
+	"follows_today", "follow_seconds_today", "suspicion", "strikes", "milestone",
+	"won", "win_tier", "endless_mark", "payout", "owned", "store_unlocked",
+	"assets_unlocked", "comments_unlocked", "assets", "paused", "agents",
+	"agents_unlocked", "bulk", "likes_given_today", "liked", "fired", "people",
+	"suggestions", "reactions", "rerolls_left", "trending", "draft", "my_posts",
+	"feed",
+]
+
+# The account the removed opening chapter put you in. A save written during it
+# describes a run this build has no way to continue.
+const RETIRED_HANDLE := "rt_hon_marsh"
 
 var persistent := true
 var _dirty := false
@@ -92,11 +115,80 @@ func load_game() -> bool:
 	if text.strip_edges() == "":
 		return false
 
-	var data: Variant = JSON.parse_string(text)
-	if typeof(data) != TYPE_DICTIONARY or int(data.get("version", 0)) != VERSION:
+	var parsed: Variant = JSON.parse_string(text)
+	if typeof(parsed) != TYPE_DICTIONARY:
+		return _discard("Save: %s is not readable" % PATH)
+	var data: Dictionary = parsed
+	var from := int(data.get("version", 0))
+
+	# A save from a build newer than this one is left alone. Overwriting it with
+	# a downgrade would lose whatever that build was keeping.
+	if from > VERSION:
+		push_warning("Save: written by a newer build (version %d), not loading" % from)
 		return false
+	if from < OLDEST_READABLE:
+		return _discard("Save: version %d is too old to read" % from)
+
+	if from < VERSION:
+		data = _migrate(data, from)
+		if data.is_empty():
+			return _discard("Save: version %d could not be brought forward" % from)
+
 	_restore(data)
+	# An upgraded save is still on disk in its old shape. Marking it dirty gets
+	# the new one written on the next autosave, once the run is up and running.
+	if from < VERSION:
+		_dirty = true
 	return true
+
+
+# An unreadable save is removed rather than left in place, so the next launch
+# offers a new account instead of failing the same way again.
+func _discard(why: String) -> bool:
+	push_warning(why)
+	clear()
+	return false
+
+
+# Brings a save forward one version at a time. An empty dictionary means the run
+# it describes cannot be continued by this build.
+func _migrate(d: Dictionary, from: int) -> Dictionary:
+	var out := d.duplicate(true)
+	if from < 2:
+		out = _to_v2(out)
+	if from < 3:
+		out = _to_v3(out)
+	if out.is_empty():
+		return out
+	out["version"] = VERSION
+	return _prune(out)
+
+
+# Version 1 had no reliable clock stamp, so an upgraded save reports no time away
+# rather than inventing a night's worth of offline earnings.
+func _to_v2(d: Dictionary) -> Dictionary:
+	d["at_wall"] = Time.get_unix_time_from_system()
+	if not d.has("win_tier"):
+		d["win_tier"] = 1 if bool(d.get("won", false)) else 0
+	if not d.has("endless_mark"):
+		d["endless_mark"] = 0
+	return d
+
+
+# Version 3 dropped the opening chapter. A save from it is on an account this
+# build cannot deal a hand to, so there is nothing to bring forward.
+func _to_v3(d: Dictionary) -> Dictionary:
+	if String(d.get("handle", "")) == RETIRED_HANDLE:
+		return {}
+	return d
+
+
+func _prune(d: Dictionary) -> Dictionary:
+	var out := {}
+	for key: String in FIELDS:
+		if d.has(key):
+			out[key] = d[key]
+	return out
 
 
 func _snapshot() -> Dictionary:
