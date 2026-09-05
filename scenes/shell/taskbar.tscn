@@ -1,0 +1,76 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/shell/taskbar.gd" id="1_taskbar"]
+[ext_resource type="Script" path="res://scripts/widgets/etched_rule.gd" id="2_rule"]
+[ext_resource type="Script" path="res://scripts/widgets/icon.gd" id="3_icon"]
+[ext_resource type="Script" path="res://scripts/widgets/meter.gd" id="4_meter"]
+
+[node name="Taskbar" type="PanelContainer"]
+custom_minimum_size = Vector2(0, 34)
+script = ExtResource("1_taskbar")
+
+[node name="Frame" type="Control" parent="."]
+layout_mode = 2
+clip_contents = true
+mouse_filter = 2
+
+[node name="Row" type="HBoxContainer" parent="Frame"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 6
+
+[node name="StartSlot" type="HBoxContainer" parent="Frame/Row"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Divider" type="Control" parent="Frame/Row"]
+custom_minimum_size = Vector2(2, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 3
+mouse_filter = 2
+script = ExtResource("2_rule")
+vertical = true
+
+[node name="Tasks" type="HBoxContainer" parent="Frame/Row"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Grow" type="Control" parent="Frame/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="Tray" type="PanelContainer" parent="Frame/Row"]
+layout_mode = 2
+
+[node name="TrayRow" type="HBoxContainer" parent="Frame/Row/Tray"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Eye" type="Control" parent="Frame/Row/Tray/TrayRow"]
+custom_minimum_size = Vector2(15, 15)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+script = ExtResource("3_icon")
+kind = 3
+color = Color(0.501961, 0.501961, 0.501961, 1)
+
+[node name="DayMeter" type="Control" parent="Frame/Row/Tray/TrayRow"]
+custom_minimum_size = Vector2(88, 14)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+script = ExtResource("4_meter")
+value = 1.0
+ink = Color(0, 0, 0.501961, 1)
+
+[node name="Clock" type="Label" parent="Frame/Row/Tray/TrayRow"]
+layout_mode = 2
+size_flags_vertical = 4
+text = "day 1"

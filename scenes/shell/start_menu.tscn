@@ -1,0 +1,44 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/screens/start_menu.gd" id="1_menu"]
+
+[node name="StartMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_menu")
+
+[node name="Frame" type="PanelContainer" parent="."]
+custom_minimum_size = Vector2(236, 0)
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_bottom = -36.0
+grow_horizontal = 1
+grow_vertical = 0
+
+[node name="Row" type="HBoxContainer" parent="Frame"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Spine" type="PanelContainer" parent="Frame/Row"]
+custom_minimum_size = Vector2(26, 0)
+layout_mode = 2
+
+[node name="Letters" type="Label" parent="Frame/Row/Spine"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+theme_override_constants/line_spacing = -2
+horizontal_alignment = 1
+vertical_alignment = 2
+
+[node name="Items" type="VBoxContainer" parent="Frame/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0

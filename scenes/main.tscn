@@ -1,0 +1,156 @@
+[gd_scene load_steps=8 format=3 uid="uid://sfd4blgxfeic"]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_shell"]
+[ext_resource type="Shader" path="res://shaders/desktop.gdshader" id="2_desktop"]
+[ext_resource type="Shader" path="res://shaders/glitch_fx.gdshader" id="3_glitch"]
+[ext_resource type="PackedScene" path="res://scenes/widgets/win_window.tscn" id="4_window"]
+[ext_resource type="PackedScene" path="res://scenes/shell/taskbar.tscn" id="5_taskbar"]
+
+[sub_resource type="ShaderMaterial" id="Desktop_1"]
+shader = ExtResource("2_desktop")
+
+[sub_resource type="ShaderMaterial" id="Glitch_1"]
+shader = ExtResource("3_glitch")
+
+[node name="Main" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_shell")
+
+[node name="Bezel" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 1)
+
+[node name="Desktop" type="ColorRect" parent="."]
+material = SubResource("Desktop_1")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0.501961, 0.501961, 1)
+
+[node name="ShellShift" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+
+[node name="Shell" type="Control" parent="ShellShift"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+
+[node name="Stack" type="VBoxContainer" parent="ShellShift/Shell"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 0
+
+[node name="Desk" type="MarginContainer" parent="ShellShift/Shell/Stack"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 0
+
+[node name="Row" type="HBoxContainer" parent="ShellShift/Shell/Stack/Desk"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 8
+
+[node name="LeftWindow" parent="ShellShift/Shell/Stack/Desk/Row" instance=ExtResource("4_window")]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_vertical = 3
+title = "Profile"
+
+[node name="CentreWindow" parent="ShellShift/Shell/Stack/Desk/Row" instance=ExtResource("4_window")]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+title = "ForReals - Feed"
+
+[node name="RightWindow" parent="ShellShift/Shell/Stack/Desk/Row" instance=ExtResource("4_window")]
+custom_minimum_size = Vector2(320, 0)
+layout_mode = 2
+size_flags_vertical = 3
+title = "Today"
+
+[node name="Gap" type="Control" parent="ShellShift/Shell/Stack"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Taskbar" parent="ShellShift/Shell/Stack" instance=ExtResource("5_taskbar")]
+layout_mode = 2
+
+[node name="GlitchLayer" type="ColorRect" parent="."]
+material = SubResource("Glitch_1")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="ToastLayer" type="VBoxContainer" parent="."]
+custom_minimum_size = Vector2(345, 0)
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -345.0
+offset_top = -44.0
+offset_right = -12.0
+offset_bottom = -44.0
+grow_horizontal = 0
+grow_vertical = 0
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="Veil" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_bottom = -34.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="MenuLayer" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2

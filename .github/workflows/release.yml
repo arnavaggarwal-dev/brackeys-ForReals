@@ -1,0 +1,309 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  GODOT_VERSION: "4.7.1"
+  PROJECT_NAME: "ForReals"
+
+jobs:
+  export:
+    name: Export ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macos
+            os: ubuntu-latest
+            preset: "macOS"
+            out: "ForReals.zip"
+            pack: rename
+          - name: windows
+            os: ubuntu-latest
+            preset: "Windows Desktop"
+            out: "ForReals.exe"
+            pack: zip
+          - name: linux
+            os: ubuntu-latest
+            preset: "Linux"
+            out: "ForReals.x86_64"
+            pack: zip
+          - name: web
+            os: ubuntu-latest
+            preset: "Web"
+            out: "index.html"
+            pack: zip
+          - name: android
+            os: ubuntu-latest
+            preset: "Android"
+            out: "ForReals.apk"
+            pack: apk
+          - name: ios
+            os: macos-latest
+            preset: "iOS"
+            out: "ForReals.ipa"
+            pack: ipa
+
+    steps:
+      - name: Check out the project
+        uses: actions/checkout@v4
+        with:
+          lfs: false
+
+      - name: Fetch the source assets that live in LFS
+        run: |
+          git lfs pull --include="assets/**" --exclude=""
+
+      - name: Install a JDK for the Android tooling
+        if: matrix.name == 'android'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up the Android SDK
+        if: matrix.name == 'android'
+        uses: android-actions/setup-android@v3
+
+      # Godot signs the APK itself, reading the keystore out of the preset. A
+      # repository secret is used when one is set, so that successive releases
+      # install over each other; without it a throwaway key is made here, which
+      # still produces an APK a phone will accept.
+      - name: Provide an Android signing key
+        if: matrix.name == 'android'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          store="${RUNNER_TEMP}/forreals.keystore"
+          if [ -n "${KEYSTORE_BASE64}" ]; then
+            echo "${KEYSTORE_BASE64}" | base64 -d > "${store}"
+            pass="${KEYSTORE_PASSWORD}"
+            alias="${KEY_ALIAS}"
+            echo "Signing with the repository keystore."
+          else
+            pass="forreals"
+            alias="forreals"
+            keytool -genkeypair -v -keystore "${store}" -alias "${alias}" -keyalg RSA -keysize 2048 -validity 10000 -storepass "${pass}" -keypass "${pass}" -dname "CN=ForReals, OU=Jam, O=ForReals, C=GB"
+            echo "::warning::No ANDROID_KEYSTORE_BASE64 secret is set, so this APK is signed with a throwaway key and will not install over an earlier release."
+          fi
+          python3 - "${store}" "${alias}" "${pass}" <<'PYCFG'
+          import sys
+
+          store, alias, password = sys.argv[1:4]
+          head = "[preset.4.options]\n"
+          with open("export_presets.cfg", encoding="utf-8") as f:
+              cfg = f.read()
+          assert head in cfg, "the Android preset is no longer preset.4, fix this step"
+          keys = "".join(
+              '%s="%s"\n' % (key, value)
+              for key, value in [
+                  ("keystore/debug", store),
+                  ("keystore/debug_user", alias),
+                  ("keystore/debug_password", password),
+                  ("keystore/release", store),
+                  ("keystore/release_user", alias),
+                  ("keystore/release_password", password),
+              ]
+          )
+          with open("export_presets.cfg", "w", encoding="utf-8", newline="\n") as f:
+              f.write(cfg.replace(head, head + keys, 1))
+          print("Android preset pointed at", store)
+          PYCFG
+
+      # Godot refuses to export iOS at all without a team ID, even though this
+      # build is never signed. A real one is used when the secret is set, so the
+      # generated project is ready to sign; otherwise a placeholder gets it past
+      # the check and xcodebuild ignores it under CODE_SIGNING_ALLOWED=NO.
+      - name: Set the Apple team ID
+        if: matrix.name == 'ios'
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          if [ -z "${APPLE_TEAM_ID:-}" ]; then
+            echo "No APPLE_TEAM_ID secret set; keeping the placeholder and building unsigned."
+            exit 0
+          fi
+          python3 - "${APPLE_TEAM_ID}" <<'PYCFG'
+          import sys
+
+          team = sys.argv[1]
+          with open("export_presets.cfg", encoding="utf-8") as f:
+              cfg = f.read()
+          old = 'application/app_store_team_id="0000000000"'
+          assert old in cfg, "the iOS placeholder team id moved, fix this step"
+          with open("export_presets.cfg", "w", encoding="utf-8", newline="\n") as f:
+              f.write(cfg.replace(old, 'application/app_store_team_id="%s"' % team, 1))
+          print("iOS preset now targets team", team)
+          PYCFG
+
+      - name: Install Godot ${{ env.GODOT_VERSION }} and the export templates
+        if: runner.os == 'Linux'
+        run: |
+          set -euxo pipefail
+          base="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+
+          curl -fsSL -o godot.zip "${base}/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q godot.zip
+          sudo mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" /usr/local/bin/godot
+          sudo chmod +x /usr/local/bin/godot
+          godot --version
+
+          curl -fsSL -o templates.tpz "${base}/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          unzip -q templates.tpz
+          template_dir="${HOME}/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "${template_dir}"
+          mv templates/* "${template_dir}/"
+          ls "${template_dir}" | head
+
+      - name: Install Godot ${{ env.GODOT_VERSION }} and the export templates (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          set -euxo pipefail
+          base="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+
+          curl -fsSL -o godot.zip "${base}/Godot_v${GODOT_VERSION}-stable_macos.universal.zip"
+          unzip -q godot.zip
+          # curl sets no quarantine flag, but a runner image may still carry one.
+          xattr -dr com.apple.quarantine Godot.app || true
+          sudo ln -sf "${PWD}/Godot.app/Contents/MacOS/Godot" /usr/local/bin/godot
+          godot --version
+
+          curl -fsSL -o templates.tpz "${base}/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          unzip -q templates.tpz
+          template_dir="${HOME}/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "${template_dir}"
+          mv templates/* "${template_dir}/"
+          ls "${template_dir}" | head
+
+      - name: Import resources
+        run: |
+          godot --headless --path . --import || true
+          godot --headless --path . --import
+
+      - name: Export ${{ matrix.name }}
+        run: |
+          set -euxo pipefail
+          rm -rf builds
+          mkdir -p "builds/${{ matrix.name }}"
+          godot --headless --path . \
+            --export-release "${{ matrix.preset }}" \
+            "builds/${{ matrix.name }}/${{ matrix.out }}"
+
+      # Godot writes an Xcode project rather than a finished app, and turning that
+      # into an .ipa is xcodebuild's job. Signing is switched off: without an Apple
+      # Developer account there is no certificate to sign with, and an unsigned
+      # .ipa is still installable through AltStore, Sideloadly or a paid account
+      # re-signing it. It cannot go to the App Store as it stands.
+      - name: Build the Xcode project into an unsigned ipa
+        if: matrix.name == 'ios'
+        run: |
+          set -euxo pipefail
+          project="$(find builds/ios -maxdepth 2 -name '*.xcodeproj' | head -1)"
+          if [ -z "${project}" ]; then
+            echo "::error::Godot produced no Xcode project under builds/ios"
+            find builds/ios -maxdepth 3 | head -50
+            exit 1
+          fi
+          cd "$(dirname "${project}")"
+          project="$(basename "${project}")"
+          xcodebuild -project "${project}" -list
+
+          # -target rather than -scheme: Godot's project carries no shared scheme.
+          target="$(xcodebuild -project "${project}" -list |
+            awk '/Targets:/{grab=1; next} /^$/{grab=0} grab{print $1; exit}')"
+          echo "building target ${target}"
+
+          xcodebuild -project "${project}" -target "${target}" \
+            -configuration Release -sdk iphoneos \
+            CONFIGURATION_BUILD_DIR="${PWD}/out" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" CODE_SIGN_ENTITLEMENTS="" \
+            build
+
+          app="$(find out -maxdepth 1 -name '*.app' | head -1)"
+          if [ -z "${app}" ]; then
+            echo "::error::xcodebuild produced no .app"
+            find out -maxdepth 2 | head -50
+            exit 1
+          fi
+          mkdir -p Payload
+          cp -R "${app}" "Payload/$(basename "${app}")"
+          zip -r -9 -q "${GITHUB_WORKSPACE}/builds/ios/ForReals.ipa" Payload
+          ls -lh "${GITHUB_WORKSPACE}/builds/ios/ForReals.ipa"
+
+      - name: Package ${{ matrix.name }}
+        run: |
+          set -euxo pipefail
+          src="builds/${{ matrix.name }}"
+          out="builds/${PROJECT_NAME}-${{ matrix.name }}"
+          case "${{ matrix.pack }}" in
+            zip) ( cd "${src}" && zip -r -9 -q "../${PROJECT_NAME}-${{ matrix.name }}.zip" . ) ;;
+            rename) mv "${src}/${{ matrix.out }}" "${out}.zip" ;;
+            apk) mv "${src}/${{ matrix.out }}" "${out}.apk" ;;
+            ipa) mv "${src}/${{ matrix.out }}" "${out}.ipa" ;;
+          esac
+          ls -lh "${out}".*
+
+      - name: Upload ${{ matrix.name }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: builds/${{ env.PROJECT_NAME }}-${{ matrix.name }}.*
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: Publish release
+    needs: export
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Collect every export
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: List what is going out
+        run: ls -lhR dist
+
+      - name: Publish
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/**/*.zip
+            dist/**/*.apk
+            dist/**/*.ipa
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          body: |
+            **ForReals** - Brackeys Game Jam 2026.2, *Trust No One*.
+
+            | Download | Platform |
+            | --- | --- |
+            | `ForReals-windows.zip` | Windows x86_64 |
+            | `ForReals-linux.zip` | Linux x86_64 |
+            | `ForReals-macos.zip` | macOS universal (unsigned - see below) |
+            | `ForReals-web.zip` | browser build, for itch.io or any static host |
+            | `ForReals-android.apk` | Android phones and tablets, arm64/arm32/x86_64 |
+            | `ForReals-ios.ipa` | iPhone and iPad, **unsigned** - see below |
+
+            The macOS build is ad-hoc signed, not notarised. Gatekeeper will
+            refuse it on first launch: right-click the app and choose **Open**,
+            or run `xattr -dr com.apple.quarantine ForReals.app`.
+
+            The iOS build is **unsigned**, because signing needs an Apple
+            Developer account. Install it with AltStore or Sideloadly, which
+            re-sign it with your own Apple ID, or re-sign it yourself. It will
+            not install by double-clicking and it is not App Store ready.

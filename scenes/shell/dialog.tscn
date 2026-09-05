@@ -1,0 +1,77 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/screens/dialog.gd" id="1_dialog"]
+[ext_resource type="PackedScene" path="res://scenes/widgets/scroll_pane.tscn" id="2_scroll"]
+
+[node name="Dialog" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_dialog")
+
+[node name="Dim" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.35)
+
+[node name="Frame" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Column" type="VBoxContainer" parent="Frame"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="TitleBar" type="PanelContainer" parent="Frame/Column"]
+layout_mode = 2
+
+[node name="Bar" type="HBoxContainer" parent="Frame/Column/TitleBar"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Title" type="Label" parent="Frame/Column/TitleBar/Bar"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+
+[node name="Grow" type="Control" parent="Frame/Column/TitleBar/Bar"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="CloseSlot" type="HBoxContainer" parent="Frame/Column/TitleBar/Bar"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 0
+
+[node name="Scroll" parent="Frame/Column" instance=ExtResource("2_scroll")]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+pad = Vector4i(12, 12, 12, 12)
+
+[node name="FooterPad" type="MarginContainer" parent="Frame/Column"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="Footer" type="VBoxContainer" parent="Frame/Column/FooterPad"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0

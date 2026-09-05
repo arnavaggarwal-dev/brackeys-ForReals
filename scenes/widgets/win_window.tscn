@@ -1,0 +1,90 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/widgets/win_window.gd" id="1_window"]
+[ext_resource type="Script" path="res://scripts/widgets/icon.gd" id="2_icon"]
+[ext_resource type="PackedScene" path="res://scenes/widgets/scroll_pane.tscn" id="3_scroll"]
+
+[node name="WinWindow" type="PanelContainer"]
+script = ExtResource("1_window")
+
+[node name="Column" type="VBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="TitleBar" type="PanelContainer" parent="Column"]
+layout_mode = 2
+
+[node name="Bar" type="HBoxContainer" parent="Column/TitleBar"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Title" type="Label" parent="Column/TitleBar/Bar"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+mouse_filter = 2
+text = "Window"
+
+[node name="Buttons" type="HBoxContainer" parent="Column/TitleBar/Bar"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 2
+
+[node name="Minimise" type="PanelContainer" parent="Column/TitleBar/Bar/Buttons"]
+custom_minimum_size = Vector2(18, 16)
+layout_mode = 2
+
+[node name="Glyph" type="Control" parent="Column/TitleBar/Bar/Buttons/Minimise"]
+custom_minimum_size = Vector2(10, 10)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+script = ExtResource("2_icon")
+kind = 10
+color = Color(0.039216, 0.039216, 0.039216, 1)
+
+[node name="Maximise" type="PanelContainer" parent="Column/TitleBar/Bar/Buttons"]
+custom_minimum_size = Vector2(18, 16)
+layout_mode = 2
+
+[node name="Glyph" type="Control" parent="Column/TitleBar/Bar/Buttons/Maximise"]
+custom_minimum_size = Vector2(10, 10)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+script = ExtResource("2_icon")
+kind = 11
+color = Color(0.039216, 0.039216, 0.039216, 1)
+
+[node name="Close" type="PanelContainer" parent="Column/TitleBar/Bar/Buttons"]
+custom_minimum_size = Vector2(18, 16)
+layout_mode = 2
+
+[node name="Glyph" type="Control" parent="Column/TitleBar/Bar/Buttons/Close"]
+custom_minimum_size = Vector2(10, 10)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+script = ExtResource("2_icon")
+kind = 12
+color = Color(0.039216, 0.039216, 0.039216, 1)
+
+[node name="Gap" type="Control" parent="Column"]
+custom_minimum_size = Vector2(0, 2)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Body" type="PanelContainer" parent="Column"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Client" type="VBoxContainer" parent="Column/Body"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 0
+
+[node name="Scroll" parent="Column/Body/Client" instance=ExtResource("3_scroll")]
+layout_mode = 2
